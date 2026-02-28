@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bitfinex 放貸儀表板 — V2 Orbitron</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f172a;color:#e2e8f0;font-family:'Inter','Noto Sans TC',sans-serif;line-height:1.7;padding:0 0 60px}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(56,189,248,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,0.03) 1px,transparent 1px);background-size:60px 60px;animation:gridShift 20s linear infinite}
+@keyframes gridShift{to{background-position:60px 60px}}
+a{color:#38bdf8;text-decoration:none}
+a:hover{text-decoration:underline}
+nav{background:#0f172aee;border-bottom:1px solid #1e293b;padding:14px 24px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;position:sticky;top:0;z-index:10;backdrop-filter:blur(12px)}
+nav a{font-family:'Orbitron',sans-serif;font-size:12px;padding:6px 16px;border:1px solid #38bdf830;border-radius:8px;transition:all .2s;letter-spacing:0.5px}
+nav a:hover{background:#38bdf815;border-color:#38bdf860;text-decoration:none;box-shadow:0 0 16px #38bdf820}
+.container{max-width:1100px;margin:0 auto;padding:24px;position:relative;z-index:1}
+h1{font-family:'Orbitron',sans-serif;font-size:32px;color:#38bdf8;margin:32px 0 8px;text-align:center;text-shadow:0 0 30px #38bdf840}
+.subtitle{text-align:center;color:#64748b;margin-bottom:32px;font-size:14px}
+.card{background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%);border:1px solid #38bdf820;border-radius:16px;padding:28px;margin-bottom:24px;box-shadow:0 0 30px #38bdf808;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 0 40px #38bdf818}
+.card h2{font-family:'Orbitron',sans-serif;color:#38bdf8;font-size:16px;margin-bottom:18px;border-bottom:1px solid #38bdf815;padding-bottom:10px;letter-spacing:1px}
+.card h3{color:#7dd3fc;font-size:14px;margin:16px 0 10px;font-weight:600}
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
+.stat{background:#0f172a;border-radius:12px;padding:16px;text-align:center;border:1px solid #1e293b;transition:border-color .2s}
+.stat:hover{border-color:#38bdf840}
+.stat .label{font-family:'Orbitron',sans-serif;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1.5px}
+.stat .value{font-size:20px;color:#38bdf8;font-weight:700;margin-top:6px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th{text-align:left;color:#38bdf8;padding:10px 12px;border-bottom:1px solid #38bdf830;font-weight:600;font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:0.5px}
+td{padding:10px 12px;border-bottom:1px solid #1e293b}
+tr:hover td{background:#1e293b60}
+code{background:#0f172a;padding:2px 8px;border-radius:6px;font-size:13px;color:#7dd3fc}
+.tag{display:inline-block;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;font-family:'Orbitron',sans-serif;letter-spacing:0.5px}
+.tag-pass{background:#38bdf815;color:#38bdf8;border:1px solid #38bdf840}
+.tag-live{background:#22c55e15;color:#22c55e;border:1px solid #22c55e40}
+.todo-item{padding:8px 0;display:flex;align-items:center;gap:10px;font-size:14px}
+.todo-item .box{width:18px;height:18px;border:2px solid #38bdf850;border-radius:4px;flex-shrink:0}
+.todo-item .box.done{background:#38bdf8;border-color:#38bdf8;position:relative}
+.todo-item .box.done::after{content:'✓';color:#0f172a;font-size:12px;font-weight:700;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.module-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;font-size:13px}
+.module-list .mod{background:#0f172a;padding:10px 14px;border-radius:8px;border-left:3px solid #38bdf840}
+.module-list .mod code{background:transparent;padding:0;color:#38bdf8}
+.module-list .mod span{color:#64748b}
+.guard-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.guard{background:#0f172a;padding:14px;border-radius:10px;border-left:3px solid #f59e0b60}
+.guard .name{color:#f59e0b;font-weight:600;font-size:14px}
+.guard .desc{color:#64748b;font-size:13px}
+pre{background:#0f172a;padding:16px;border-radius:10px;overflow-x:auto;font-size:13px;color:#7dd3fc;border:1px solid #1e293b}
+svg text{font-family:'Inter','Noto Sans TC',sans-serif}
+
+@media(max-width:600px){
+  .container{padding:14px}
+  .card{padding:18px}
+  h1{font-size:24px}
+  nav{gap:8px}
+  nav a{font-size:10px;padding:5px 10px}
+  .overview-grid{grid-template-columns:1fr 1fr}
+  .module-list{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav>
+  <a href="index.html">← 專案控制台</a>
+</nav>
+<div class="container">
+<h1>🏦 BITFINEX 自動放貸機器人</h1>
+<p class="subtitle">開發全紀錄 &amp; 部署狀態</p>
+
+<div class="card">
+  <h2>📋 專案總覽</h2>
+  <div class="overview-grid">
+    <div class="stat"><div class="label">狀態</div><div class="value" style="color:#22c55e">🟢 Live</div></div>
+    <div class="stat"><div class="label">資金</div><div class="value">USDT 全額借出</div></div>
+    <div class="stat"><div class="label">Tests</div><div class="value">88 ✓</div></div>
+    <div class="stat"><div class="label">KYC</div><div class="value">已通過</div></div>
+    <div class="stat"><div class="label">策略</div><div class="value" style="font-size:13px">AdaptivePeriod</div></div>
+    <div class="stat"><div class="label">排程</div><div class="value" style="font-size:13px">launchd</div></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>🔧 架構模組圖</h2>
+  <div style="overflow-x:auto;margin:12px 0">
+    <svg viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:800px;display:block;margin:0 auto">
+      <defs>
+        <filter id="glow2"><feGaussianBlur stdDeviation="3" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="arr2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#38bdf880"/></marker>
+      </defs>
+      <rect x="20" y="40" width="130" height="44" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="85" y="67" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="600">Config</text>
+      <rect x="200" y="40" width="180" height="44" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="290" y="67" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="600">Strategy Pipeline</text>
+      <rect x="430" y="40" width="140" height="44" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="500" y="67" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="600">Executor</text>
+      <rect x="620" y="40" width="150" height="44" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="695" y="67" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="600">Exchange API</text>
+      <rect x="200" y="140" width="180" height="44" rx="10" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="290" y="167" text-anchor="middle" fill="#f59e0b" font-size="14" font-weight="600">Risk Guards (×5)</text>
+      <rect x="430" y="140" width="180" height="44" rx="10" fill="#1e293b" stroke="#7dd3fc" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="520" y="167" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">Telegram Reporter</text>
+      <rect x="200" y="240" width="150" height="44" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="275" y="267" text-anchor="middle" fill="#38bdf8" font-size="14" font-weight="600">SQLite DB</text>
+      <rect x="410" y="240" width="150" height="44" rx="10" fill="#1e293b" stroke="#7dd3fc" stroke-width="1.5" filter="url(#glow2)"/>
+      <text x="485" y="267" text-anchor="middle" fill="#7dd3fc" font-size="14" font-weight="600">Daily Report</text>
+      <line x1="150" y1="62" x2="196" y2="62" stroke="#38bdf880" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="380" y1="62" x2="426" y2="62" stroke="#38bdf880" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="570" y1="62" x2="616" y2="62" stroke="#38bdf880" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="290" y1="84" x2="290" y2="136" stroke="#f59e0b80" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="500" y1="84" x2="520" y2="136" stroke="#7dd3fc80" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="290" y1="184" x2="275" y2="236" stroke="#38bdf880" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <line x1="350" y1="262" x2="406" y2="262" stroke="#7dd3fc80" stroke-width="1.5" marker-end="url(#arr2)"/>
+      <rect x="620" y="240" width="150" height="44" rx="10" fill="#1e293b" stroke="#38bdf840" stroke-width="1" stroke-dasharray="6,3"/>
+      <text x="695" y="267" text-anchor="middle" fill="#64748b" font-size="13">Backtest Replay</text>
+      <line x1="350" y1="270" x2="616" y2="262" stroke="#38bdf830" stroke-width="1" stroke-dasharray="4,4"/>
+    </svg>
+  </div>
+  <h3>模組清單</h3>
+  <div class="module-list">
+    <div class="mod"><code>app/config.py</code> <span>— 設定管理</span></div>
+    <div class="mod"><code>app/exchange/bitfinex_client.py</code> <span>— REST API 封裝</span></div>
+    <div class="mod"><code>app/strategy/adaptive_period.py</code> <span>— AdaptivePeriod 利率策略</span></div>
+    <div class="mod"><code>app/strategy/allocator.py</code> <span>— 多階梯配置 (40/30/20/10%)</span></div>
+    <div class="mod"><code>app/execution/executor.py</code> <span>— 下單執行 (3 模式)</span></div>
+    <div class="mod"><code>app/execution/runner.py</code> <span>— 持續迴圈 + 信號處理</span></div>
+    <div class="mod"><code>app/risk/guards.py</code> <span>— 5 道風控</span></div>
+    <div class="mod"><code>app/report/daily_report.py</code> <span>— 每日摘要</span></div>
+    <div class="mod"><code>app/report/telegram_reporter.py</code> <span>— TG 推播（靜音模式）</span></div>
+    <div class="mod"><code>app/storage/db.py</code> <span>— SQLite 持久化</span></div>
+    <div class="mod"><code>app/backtest/replay.py</code> <span>— 歷史回測</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>📅 開發時間線</h2>
+  <table>
+    <thead><tr><th>Sprint</th><th>內容</th><th>Tests</th></tr></thead>
+    <tbody>
+      <tr><td>Day 3</td><td>初始架構：config + strategy + paper mode</td><td>—</td></tr>
+      <tr><td>Day 4</td><td>Executor（paper/dry-run/live）+ paper loop</td><td>+tests</td></tr>
+      <tr><td>Day 5</td><td>日報產生 + 持續 loop + signal handling</td><td>26</td></tr>
+      <tr><td>Day 6</td><td>風控模組（5 guards）+ executor 整合</td><td>46</td></tr>
+      <tr><td>Day 7</td><td>Telegram 報告推播</td><td>59</td></tr>
+      <tr><td>Day 8</td><td>回測模組 + daemon 化</td><td>—</td></tr>
+      <tr><td>Day 10</td><td>UAT checklist + production runbook + health check</td><td style="color:#38bdf8;font-weight:700">88</td></tr>
+      <tr><td>Fix</td><td>User-Agent header + order book regional fallback</td><td style="color:#38bdf8;font-weight:700">88</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>⚡ 執行模式</h2>
+  <table>
+    <thead><tr><th>Mode</th><th>行為</th><th>狀態</th></tr></thead>
+    <tbody>
+      <tr><td><code>paper</code></td><td>本地模擬，持久化到 SQLite</td><td><span class="tag tag-pass">可用</span></td></tr>
+      <tr><td><code>dry-run</code></td><td>透過 read-only API 驗證，不實際下單</td><td><span class="tag tag-pass">可用</span></td></tr>
+      <tr><td><code>live</code></td><td>全額借出，USDT 全額借出 運行中</td><td><span class="tag tag-live">🟢 LIVE</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🛡️ 風控機制（5 GUARDS）</h2>
+  <div class="guard-list">
+    <div class="guard"><div class="name">Idle Cash Ratio Guard</div><div class="desc">閒置資金比控制</div></div>
+    <div class="guard"><div class="name">Single Offer Limit</div><div class="desc">單筆上限</div></div>
+    <div class="guard"><div class="name">Reprice Cooldown</div><div class="desc">重定價冷卻</div></div>
+    <div class="guard"><div class="name">Daily Circuit Breaker</div><div class="desc">日次熔斷</div></div>
+    <div class="guard"><div class="name">Consecutive Failure Pause</div><div class="desc">連續失敗暫停</div></div>
+  </div>
+</div>
+
+
+
+<div class="card">
+  <h2>📝 進度 TODO</h2>
+  <div class="todo-item"><div class="box done"></div>入金到 Bitfinex — USDT 全額借出</div>
+  <div class="todo-item"><div class="box done"></div>切換 live mode — 已解鎖</div>
+  <div class="todo-item"><div class="box done"></div>接入 Telegram 即時通知 — 靜音模式</div>
+  <div class="todo-item"><div class="box"></div>部署方式：直接跑 launchd（跳過 Docker）</div>
+  <div class="todo-item"><div class="box"></div>收集真實利率數據跑回測對照</div>
+</div>
+
+
+
+</div>
+</body>
+</html>

@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VC × Jarvis — 專案總覽 V2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0F172A',
+            primary: '#1E293B',
+            secondary: '#334155',
+            cta: '#22C55E',
+            txt: '#F8FAFC',
+            dim: '#94A3B8',
+          },
+          fontFamily: {
+            display: ['Orbitron', 'sans-serif'],
+            body: ['Exo 2', 'Noto Sans TC', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Exo 2', 'Noto Sans TC', sans-serif; background: #0F172A; color: #F8FAFC; margin: 0; }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridShift 20s linear infinite;
+    }
+    @keyframes gridShift {
+      to { background-position: 60px 60px; }
+    }
+
+    /* Scroll snap */
+    .snap-container { scroll-snap-type: y proximity; }
+    .snap-section { scroll-snap-align: start; }
+
+    /* Card glow on hover */
+    .bento-card {
+      transition: transform 250ms ease, box-shadow 250ms ease, border-color 250ms ease;
+    }
+    .bento-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 0 40px rgba(34,197,94,0.25), 0 20px 60px rgba(0,0,0,0.4);
+      border-color: rgba(34,197,94,0.5);
+    }
+    .bento-card:focus-visible {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
+    }
+
+    /* Staggered reveal */
+    .bento-card {
+      opacity: 0;
+      transform: translateY(30px);
+      animation: cardReveal 0.6s ease forwards;
+    }
+    @keyframes cardReveal {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Count-up */
+    .count-up { font-variant-numeric: tabular-nums; }
+
+    /* View toggle */
+    .view-btn { transition: background 200ms, color 200ms; }
+    .view-btn.active { background: #22C55E; color: #0F172A; }
+    .view-btn:hover:not(.active) { background: #334155; }
+    .view-btn:focus-visible { outline: 2px solid #22C55E; outline-offset: 2px; }
+
+    /* Modal / Drawer */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(15,23,42,0.85); backdrop-filter: blur(8px);
+      opacity: 0; pointer-events: none;
+      transition: opacity 300ms ease;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: auto; }
+    .modal-panel {
+      position: fixed; top: 0; right: 0; z-index: 51;
+      width: min(480px, 90vw); height: 100vh;
+      background: #1E293B; border-left: 1px solid rgba(34,197,94,0.3);
+      transform: translateX(100%);
+      transition: transform 300ms ease;
+      overflow-y: auto;
+    }
+    .modal-overlay.open + .modal-panel,
+    .modal-panel.open { transform: translateX(0); }
+
+    /* Status pill colors */
+    .status-done { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .status-active { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+    .status-paused { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .status-planned { background: rgba(251,146,60,0.15); color: #fb923c; border: 1px solid rgba(251,146,60,0.3); }
+    .status-core { background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+    .status-running { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+
+    /* Graph section */
+    #graphSection svg { width: 100%; height: 100%; }
+
+    /* prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      .bento-card { animation: none; opacity: 1; transform: none; }
+      .bento-card:hover { transform: none; }
+      body::before { animation: none; }
+      @keyframes gridShift { to { background-position: 0 0; } }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* Progress panel */
+    .progress-panel {
+      position: fixed; bottom: 1.5rem; left: 1.5rem; width: 320px; max-height: 70vh;
+      background: rgba(15,23,42,0.92); backdrop-filter: blur(12px);
+      border: 1px solid rgba(56,189,248,0.2); border-radius: 16px;
+      padding: 1.2rem; overflow-y: auto; z-index: 50;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .progress-panel.collapsed { transform: translateY(calc(100% - 44px)); }
+    .progress-toggle { cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
+    .progress-toggle h3 { font-family: 'Orbitron', monospace; font-size: 0.75rem; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
+    .progress-toggle span { color: #64748b; font-size: 0.7rem; }
+    .progress-item { margin-bottom: 0.7rem; cursor: pointer; padding: 0.3rem 0; }
+    .progress-item:hover .progress-name { color: #38bdf8; }
+    .progress-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+    .progress-name { color: #cbd5e1; font-size: 0.75rem; font-weight: 500; transition: color 0.2s; }
+    .progress-pct { color: #64748b; font-size: 0.65rem; }
+    .progress-bar { height: 5px; background: rgba(30,41,59,0.8); border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; transition: width 1.5s cubic-bezier(0.4,0,0.2,1); }
+    .fill-done { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .fill-active { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .fill-planned { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    @media (max-width: 768px) { .progress-panel { width: calc(100% - 2rem); left: 1rem; bottom: 1rem; } }
+  </style>
+</head>
+<body class="snap-container overflow-x-hidden overflow-y-auto min-h-screen relative">
+
+  <!-- ========== HEADER ========== -->
+  <header class="snap-section relative z-10 px-6 md:px-12 pt-12 pb-8">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="font-display text-4xl md:text-5xl lg:text-6xl font-black tracking-wider leading-tight">
+        <span class="text-cta">VC</span> × JARVIS
+      </h1>
+      <p class="font-body text-dim text-lg md:text-xl mt-3 max-w-2xl">
+        專案神經網路控制台 — 投資・醫學・自動化三大領域的即時可視化總覽
+      </p>
+
+      <!-- Stats row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-10">
+        <div class="bg-primary border border-secondary rounded-2xl p-6">
+          <div class="text-dim text-sm font-body uppercase tracking-widest">Total Nodes</div>
+          <div class="font-display text-4xl font-bold mt-2 count-up" data-target="24">0</div>
+        </div>
+        <div class="bg-primary border border-secondary rounded-2xl p-6">
+          <div class="text-dim text-sm font-body uppercase tracking-widest">Projects</div>
+          <div class="font-display text-4xl font-bold mt-2 count-up" data-target="10">0</div>
+        </div>
+        <div class="bg-primary border border-secondary rounded-2xl p-6">
+          <div class="text-dim text-sm font-body uppercase tracking-widest">Active</div>
+          <div class="font-display text-4xl font-bold text-cta mt-2 count-up" data-target="7">0</div>
+        </div>
+        <div class="bg-primary border border-secondary rounded-2xl p-6">
+          <div class="text-dim text-sm font-body uppercase tracking-widest">Infrastructure</div>
+          <div class="font-display text-4xl font-bold mt-2 count-up" data-target="6">0</div>
+        </div>
+      </div>
+
+      <!-- View Toggle -->
+      <div class="flex gap-2 mt-8">
+        <button class="view-btn active font-body text-sm font-semibold px-5 py-2.5 rounded-xl cursor-pointer" data-view="grid" aria-label="Grid view">
+          <i data-lucide="layout-grid" class="inline-block w-4 h-4 mr-1 align-middle"></i>Grid
+        </button>
+        <button class="view-btn font-body text-sm font-semibold px-5 py-2.5 rounded-xl cursor-pointer bg-primary text-dim border border-secondary" data-view="graph" aria-label="Graph view">
+          <i data-lucide="share-2" class="inline-block w-4 h-4 mr-1 align-middle"></i>Graph
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== BENTO GRID VIEW ========== -->
+  <main id="gridView" class="snap-section relative z-10 px-6 md:px-12 pb-16">
+    <div class="max-w-7xl mx-auto" id="bentoGrid">
+      <!-- Populated by JS -->
+    </div>
+  </main>
+
+  <!-- ========== GRAPH VIEW ========== -->
+  <section id="graphSection" class="snap-section relative z-10 px-6 md:px-12 pb-16 hidden">
+    <div class="max-w-7xl mx-auto">
+      <div class="bg-primary border border-secondary rounded-3xl overflow-hidden" style="height: 70vh; min-height: 500px;">
+        <svg id="graph" aria-label="專案力導向圖"></svg>
+      </div>
+      <div class="flex flex-wrap gap-4 mt-4 justify-center">
+        <span class="flex items-center gap-2 text-sm text-dim"><span class="w-3 h-3 rounded-full bg-purple-400 inline-block shadow-[0_0_8px_rgba(168,85,247,0.6)]"></span>中心</span>
+        <span class="flex items-center gap-2 text-sm text-dim"><span class="w-3 h-3 rounded-full bg-orange-400 inline-block shadow-[0_0_8px_rgba(251,146,60,0.6)]"></span>分類</span>
+        <span class="flex items-center gap-2 text-sm text-dim"><span class="w-3 h-3 rounded-full bg-blue-400 inline-block shadow-[0_0_8px_rgba(96,165,250,0.6)]"></span>專案</span>
+        <span class="flex items-center gap-2 text-sm text-dim"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block shadow-[0_0_8px_rgba(52,211,153,0.6)]"></span>基礎設施</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== DRAWER MODAL ========== -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="modal-panel" id="modalPanel">
+    <div class="p-8" id="modalContent">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <script>
+    // ===== DATA =====
+    const iconMap = {
+      'cat_trade': 'trending-up',
+      'cat_med': 'heart-pulse',
+      'cat_ai': 'bot',
+      'cat_content': 'smartphone',
+      'trade_bible': 'bar-chart-3',
+      'trading_system': 'zap',
+      'bitfinex': 'coins',
+      'poly': 'target',
+      'pocus': 'book-open',
+      'ig_med': 'image',
+      'apple_notes': 'notebook',
+      'skill_dev': 'wrench',
+      'speech': 'mic',
+      'macmini': 'monitor',
+      'win4060': 'cpu',
+      'openclaw': 'bot',
+      'obsidian': 'database',
+      'telegram': 'send',
+      'github': 'git-branch',
+      'core': 'hexagon',
+      'signal_bot': 'radio',
+      'rdog': 'file-text',
+    };
+
+    const nodes = [
+      { id: "core", name: "VC × Jarvis", layer: "center", group: "中心", status: "核心",
+        desc: "以 OpenClaw 為核心的 AI 管家系統，串起投資、醫學、自動化三大領域。",
+        importance: 42, metrics: { "專案": "10 個面向", "知識庫": "3 大領域", "基礎設施": "6 項" },
+        tags: ["OpenClaw", "Jarvis", "Obsidian", "整體協同"] },
+      { id: "cat_trade", name: "交易", layer: "category", group: "分類", status: "活躍",
+        desc: "量化交易、虛擬貨幣、主動交易——所有跟投資相關的專案都在這。",
+        importance: 30, metrics: { "子專案": "4", "Obsidian 路徑": "交易/" },
+        tags: ["量化交易", "虛擬貨幣", "主動交易"],
+        children: ["交易聖經 (V2→V11 Transformer 迭代)", "自動下單系統", "Bitfinex 自動放貸", "Telegram Signal Bot", "Polymarket 套利"] },
+      { id: "cat_med", name: "醫學", layer: "category", group: "分類", status: "活躍",
+        desc: "急診超音波、皮膚科、醫美、EBM——臨床知識的系統化整理。",
+        importance: 28, metrics: { "子領域": "4", "Obsidian 路徑": "醫學/" },
+        tags: ["急診", "超音波", "皮膚科", "醫美", "EBM"],
+        children: ["Obsidian 知識庫擴充", "急診流程筆記", "皮膚科用藥", "醫美仿單與技巧"] },
+      { id: "cat_ai", name: "AI 工具與開發", layer: "category", group: "分類", status: "活躍",
+        desc: "OpenClaw、Claude、自動化工作流、AI 開發技巧——所有 AI 相關知識與工具。",
+        importance: 26, metrics: { "子領域": "4", "Obsidian 路徑": "AI工具與開發/" },
+        tags: ["OpenClaw", "Claude", "自動化", "Coding Agent"],
+        children: ["OpenClaw Skill 開發", "Apple Notes 精煉", "RDOG Skill", "OpenClaw 與 Claude 系列筆記", "AI 開發技巧", "自動化工作流"] },
+      { id: "cat_content", name: "內容與分享", layer: "category", group: "分類", status: "活躍",
+        desc: "IG 醫美粉專、養蝦心得演講、GitHub Pages 分享站——對外輸出的管道。",
+        importance: 22, metrics: { "子專案": "3", "Obsidian 路徑": "醫美粉專/ + 技術筆記/養蝦心得/" },
+        tags: ["IG", "演講", "GitHub Pages"],
+        children: ["IG 醫美粉專 (9 主題庫存)", "養蝦心得演講素材", "RUSH Exam 分享站"] },
+      { id: "trade_bible", name: "交易聖經", layer: "project", group: "交易",
+        link: "transformer_overview.html",
+        status: "V11 訓練中，V9b 仍是基準", statusKey: "active",
+        desc: "Transformer 量化策略，V9b-Ens5 仍是基準（CAGR 154.5%）；V11 架構升級訓練中（d128/h8/L6，37 因子）。V10 不上線。",
+        importance: 28, metrics: { "迭代": "V2 → V11", "最佳版本": "V9b-Ens5 (154.5%/2.39/-27.5%)", "V11 進度": "V11a s42 完成 (96.6%/1.90/-39.4%)", "方法": "Transformer + FinLab 回測" },
+        tags: ["FinLab", "Transformer", "GPU 訓練"],
+        children: ["V9b-Ens5（現基準，胃納量 79 萬）", "V11a s42 回測完成（胃納量 127 萬）", "V11 s123 訓練中", "V10（不上線）", "Phase 3 策略優化待做"] },
+      { id: "trading_system", name: "無極動能心法 自動下單", layer: "project", group: "交易",
+        status: "運行中", statusKey: "done",
+        desc: "永豐 Shioaji + FinLab G6 多週期動能策略，每日 22:00 自動執行。已加 order_dedup 防連假重複下單。",
+        importance: 18, metrics: { "策略": "G6 多週期動能", "資金": "初始資金", "排程": "launchd 22:00" },
+        tags: ["Shioaji", "FinLab", "launchd", "零股"],
+        children: ["補單邏輯（buy-only）", "換股邏輯（rotation）", "警示股風控", "Telegram 通知", "order_dedup 防重複下單"],
+        link: "auto_trading.html" },
+      { id: "bitfinex", name: "Bitfinex 自動放貸", layer: "project", group: "交易",
+        link: "bitfinex.html",
+        status: "Live 運行中", statusKey: "done",
+        desc: "自建 Python 自動放貸機器人，已上線。USDT 全額借出 全借出，AdaptivePeriod 策略，靜音模式。",
+        importance: 17, metrics: { "狀態": "Live 運行中", "資金": "USDT 全額借出 全借出", "策略": "AdaptivePeriod" },
+        tags: ["Python", "風控", "被動收入"] },
+      { id: "poly", name: "Polymarket 套利", layer: "project", group: "交易",
+        status: "計劃階段", statusKey: "planned",
+        desc: "組合邏輯套利策略，在預測市場尋找定價錯誤。",
+        importance: 13, metrics: { "模式": "組合套利", "階段": "研究" },
+        tags: ["套利", "事件市場"] },
+      { id: "pocus", name: "Obsidian 知識庫擴充", layer: "project", group: "醫學",
+        status: "持續擴充", statusKey: "active",
+        desc: "網頁/PDF 爬取 → 中英對照 Obsidian 筆記。涵蓋 POCUS、醫美、交易等領域。",
+        importance: 24, metrics: { "POCUS": "7/20+ 主題", "醫美": "玻尿酸/拉提/注射", "技能": "knowledge-to-obsidian" },
+        tags: ["知識爬取", "Obsidian", "中英對照"],
+        link: "https://drvictorchen.github.io/rush-exam/",
+        children: ["POCUS 超音波 (7 主題)", "醫美注射筆記", "玻尿酸品牌整理", "拉提文獻", "持續爬取新主題"] },
+      { id: "ig_med", name: "IG 醫美粉專", layer: "project", group: "內容",
+        status: "進行中", statusKey: "active",
+        desc: "經營 Instagram 醫美帳號，定期發圖文內容導流本業。",
+        importance: 20, metrics: { "貼文庫": "9 主題", "已發": "1", "串接": "Meta API" },
+        tags: ["內容行銷", "自動發文"],
+        children: ["皮秒雷射（已發）", "玻尿酸、肉毒、電波等 8 篇待審", "Meta API 自動排程串接中"] },
+      { id: "apple_notes", name: "Apple Notes 精煉", layer: "project", group: "AI工具",
+        status: "穩定運行", statusKey: "done",
+        desc: "Apple Notes → Obsidian 自動精煉，每晚 22:30 執行。",
+        importance: 18, metrics: { "流程": "JXA → AI 精煉 → Obsidian", "功能": "#todo 偵測" },
+        tags: ["知識精煉", "自動化", "排程"] },
+      { id: "skill_dev", name: "OpenClaw Skill 開發", layer: "project", group: "AI工具",
+        status: "持續擴充", statusKey: "active",
+        desc: "自建 OpenClaw Skills：knowledge-to-obsidian、pdf-to-obsidian、pocus-to-obsidian、ui-ux-pro-max 等，擴充 AI 管家能力。",
+        importance: 19, metrics: { "已發布": "4+ skills", "用途": "知識爬取 / PDF 轉換 / UI 設計", "技術": "Python + Node.js" },
+        tags: ["OpenClaw", "Skill", "自動化", "工具鏈"] },
+      { id: "speech", name: "養蝦心得（演講）", layer: "project", group: "內容",
+        status: "演講素材完成", statusKey: "done",
+        desc: "使用 AI 管家的實戰經驗演講分享，含 Reveal.js 互動簡報。",
+        importance: 15, metrics: { "篇幅": "心路歷程 + 視覺化 + AWS 指南", "簡報": "Reveal.js 互動簡報", "風格": "零程式背景也看得懂" },
+        tags: ["演講", "OpenClaw", "經驗分享", "Reveal.js"] },
+      { id: "signal_bot", name: "Telegram Signal Bot", layer: "project", group: "交易",
+        status: "穩定運行", statusKey: "done",
+        desc: "每日 21:00 自動更新交易訊號，支援 /refresh 手動觸發，GitHub Pages 公開頁面。",
+        importance: 16, metrics: { "排程": "每日 21:00", "介面": "/refresh", "公開": "GitHub Pages" },
+        tags: ["Telegram", "Signal", "自動化", "GitHub Pages"] },
+      { id: "rdog", name: "RDOG Skill", layer: "project", group: "AI工具",
+        status: "v1.0 定版", statusKey: "done",
+        desc: "住院醫師 Journal Reading 助手，自動生成 Obsidian 筆記 + 英文簡報。",
+        importance: 17, metrics: { "版本": "v1.0", "流程": "/rdog → 筆記 → 簡報" },
+        tags: ["OpenClaw", "Skill", "醫學", "簡報"] },
+      { id: "macmini", name: "Mac mini", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "回測運算 + 報告伺服器 + 日常開發", importance: 14, tags: ["本地運算"] },
+      { id: "win4060", name: "Windows GPU 主機", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "RTX 顯卡，深度學習訓練專用", importance: 14, tags: ["GPU 訓練"] },
+      { id: "openclaw", name: "OpenClaw (Jarvis)", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "AI 管家核心，串接所有流程與通訊", importance: 16, tags: ["AI 管家"] },
+      { id: "obsidian", name: "Obsidian 知識庫", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "所有專案的知識沉澱終點：筆記、MOC、儀表板", importance: 15, tags: ["第二大腦"] },
+      { id: "telegram", name: "Telegram", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "人機溝通主介面", importance: 12, tags: ["通訊"] },
+      { id: "github", name: "GitHub", layer: "infra", group: "基礎設施", status: "運行中", statusKey: "running", desc: "程式碼託管 + Pages 公開分享", importance: 13, tags: ["版本管理", "Pages"] },
+    ];
+
+    const links = [
+      ...["cat_trade", "cat_med", "cat_ai", "cat_content"].map(id => ({ source: "core", target: id, strength: 0.7 })),
+      ...["macmini", "win4060", "openclaw", "obsidian", "telegram", "github"].map(id => ({ source: "core", target: id, strength: 0.45 })),
+      { source: "cat_trade", target: "trade_bible", strength: 0.6 },
+      { source: "cat_trade", target: "trading_system", strength: 0.5 },
+      { source: "cat_trade", target: "bitfinex", strength: 0.5 },
+      { source: "cat_trade", target: "poly", strength: 0.4 },
+      { source: "cat_med", target: "pocus", strength: 0.6 },
+      { source: "cat_ai", target: "apple_notes", strength: 0.5 },
+      { source: "cat_ai", target: "skill_dev", strength: 0.55 },
+      { source: "cat_content", target: "ig_med", strength: 0.55 },
+      { source: "cat_content", target: "speech", strength: 0.5 },
+      { source: "cat_content", target: "pocus", strength: 0.35 },
+      { source: "trade_bible", target: "macmini", strength: 0.3 },
+      { source: "trade_bible", target: "win4060", strength: 0.3 },
+      { source: "pocus", target: "obsidian", strength: 0.35 },
+      { source: "pocus", target: "github", strength: 0.3 },
+      { source: "apple_notes", target: "obsidian", strength: 0.35 },
+      { source: "skill_dev", target: "openclaw", strength: 0.4 },
+      { source: "skill_dev", target: "obsidian", strength: 0.3 },
+      { source: "ig_med", target: "github", strength: 0.25 },
+      { source: "speech", target: "obsidian", strength: 0.3 },
+      { source: "openclaw", target: "telegram", strength: 0.3 },
+      { source: "trade_bible", target: "trading_system", strength: 0.35 },
+      { source: "cat_trade", target: "signal_bot", strength: 0.45 },
+      { source: "cat_ai", target: "rdog", strength: 0.5 },
+      { source: "signal_bot", target: "telegram", strength: 0.35 },
+      { source: "signal_bot", target: "github", strength: 0.3 },
+      { source: "rdog", target: "obsidian", strength: 0.35 },
+    ];
+
+    // ===== STATUS HELPERS =====
+    function getStatusClass(node) {
+      const s = node.statusKey || '';
+      const status = node.status || '';
+      if (s === 'done' || /完成|穩定/.test(status)) return 'status-done';
+      if (s === 'active' || /進行|持續|擴充/.test(status)) return 'status-active';
+      if (s === 'paused' || /等待|暫停/.test(status)) return 'status-paused';
+      if (s === 'planned' || /計劃|草稿|規劃/.test(status)) return 'status-planned';
+      if (s === 'running' || /運行/.test(status)) return 'status-running';
+      if (s === 'core' || /核心/.test(status)) return 'status-core';
+      return 'status-active';
+    }
+
+    // ===== BENTO GRID =====
+    function getSpan(node) {
+      if (node.layer === 'center') return 'md:col-span-2 md:row-span-2';
+      if (node.importance >= 28) return 'md:col-span-2';
+      if (node.importance >= 22) return 'md:col-span-1 md:row-span-2';
+      return '';
+    }
+
+    // Section definitions for categorized grid view
+    const gridSections = [
+      { title: '投資與交易', icon: 'trending-up', nodeIds: ['trade_bible', 'trading_system', 'bitfinex', 'signal_bot', 'poly'] },
+      { title: '醫學與知識', icon: 'book-open', nodeIds: ['pocus'] },
+      { title: 'AI 與自動化', icon: 'cpu', nodeIds: ['apple_notes', 'skill_dev', 'rdog'] },
+      { title: '內容與輸出', icon: 'share-2', nodeIds: ['ig_med', 'speech'] },
+      { title: '基礎設施', icon: 'server', nodeIds: ['macmini', 'win4060', 'openclaw', 'obsidian', 'telegram', 'github'] },
+    ];
+
+    function createCard(node, delay) {
+      const span = getSpan(node);
+      const icon = iconMap[node.id] || 'circle';
+      const card = document.createElement('div');
+      card.className = `bento-card bg-primary border border-secondary rounded-3xl p-6 cursor-pointer ${span}`;
+      card.style.animationDelay = `${delay}ms`;
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `查看 ${node.name} 詳細資訊`);
+
+      const tagHtml = (node.tags || []).slice(0, 4).map(t =>
+        `<span class="text-xs font-body px-2.5 py-1 rounded-full bg-secondary text-dim">${t}</span>`
+      ).join('');
+
+      card.innerHTML = `
+        <div class="flex items-start justify-between mb-4">
+          <div class="w-12 h-12 rounded-2xl bg-bg flex items-center justify-center border border-secondary">
+            <i data-lucide="${icon}" class="w-6 h-6 text-cta"></i>
+          </div>
+          <span class="text-xs font-body font-semibold px-3 py-1 rounded-full ${getStatusClass(node)}">${node.status}</span>
+        </div>
+        <h3 class="font-display text-lg font-bold tracking-wide mb-2">${node.name}</h3>
+        <p class="font-body text-dim text-sm leading-relaxed mb-4 line-clamp-3">${node.desc || ''}</p>
+        <div class="flex flex-wrap gap-1.5">${tagHtml}</div>
+      `;
+
+      card.addEventListener('click', () => openDrawer(node));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(node); } });
+      return card;
+    }
+
+    function renderBentoGrid() {
+      const container = document.getElementById('bentoGrid');
+      container.innerHTML = '';
+      container.className = 'space-y-12';
+      let globalDelay = 0;
+
+      // Hero card: VC × Jarvis
+      const coreNode = nodes.find(n => n.id === 'core');
+      if (coreNode) {
+        const heroCard = createCard(coreNode, globalDelay);
+        heroCard.className = 'bento-card bg-primary border border-secondary rounded-3xl p-6 cursor-pointer col-span-full';
+        heroCard.style.animationDelay = `${globalDelay}ms`;
+        const heroGrid = document.createElement('div');
+        heroGrid.className = 'grid grid-cols-1 gap-5';
+        heroGrid.appendChild(heroCard);
+        container.appendChild(heroGrid);
+        globalDelay += 60;
+      }
+
+      // Render each section
+      gridSections.forEach(section => {
+        const sectionEl = document.createElement('div');
+
+        // Section header
+        const header = document.createElement('div');
+        header.className = 'flex items-center gap-4 mb-6';
+        header.innerHTML = `
+          <div class="w-10 h-10 rounded-xl bg-bg flex items-center justify-center border border-secondary flex-shrink-0">
+            <i data-lucide="${section.icon}" class="w-5 h-5 text-cta"></i>
+          </div>
+          <h2 class="font-display text-2xl font-bold tracking-wider text-txt">${section.title}</h2>
+          <div class="flex-1 h-px bg-gradient-to-r from-secondary to-transparent"></div>
+        `;
+        sectionEl.appendChild(header);
+
+        // Cards grid
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-5 auto-rows-min';
+
+        section.nodeIds.forEach(id => {
+          const node = nodes.find(n => n.id === id);
+          if (!node) return;
+          grid.appendChild(createCard(node, globalDelay));
+          globalDelay += 60;
+        });
+
+        sectionEl.appendChild(grid);
+        container.appendChild(sectionEl);
+      });
+
+      lucide.createIcons();
+    }
+
+    // ===== DRAWER =====
+    function openDrawer(node) {
+      const overlay = document.getElementById('modalOverlay');
+      const panel = document.getElementById('modalPanel');
+      const content = document.getElementById('modalContent');
+      const icon = iconMap[node.id] || 'circle';
+
+      const metricsHtml = node.metrics ? Object.entries(node.metrics).map(([k, v]) =>
+        `<div class="flex justify-between items-center py-3 border-b border-secondary">
+          <span class="text-dim text-sm">${k}</span>
+          <span class="font-body font-semibold text-sm">${v}</span>
+        </div>`
+      ).join('') : '';
+
+      const childrenHtml = (node.children && node.children.length) ?
+        `<div class="mt-6">
+          <h4 class="font-display text-sm tracking-widest text-dim uppercase mb-3">Sub-items</h4>
+          <div class="space-y-2">${node.children.map(c =>
+            `<div class="flex items-center gap-3 text-sm font-body text-txt/80">
+              <i data-lucide="chevron-right" class="w-3 h-3 text-cta flex-shrink-0"></i>${c}
+            </div>`
+          ).join('')}</div>
+        </div>` : '';
+
+      const tagHtml = (node.tags || []).map(t =>
+        `<span class="text-xs font-body px-3 py-1.5 rounded-full border border-secondary text-dim">${t}</span>`
+      ).join('');
+
+      const linkHtml = node.link ?
+        `<a href="${node.link}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 mt-6 px-5 py-3 bg-cta text-bg font-body font-bold text-sm rounded-xl cursor-pointer transition-all duration-200 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cta focus-visible:outline-offset-2">
+          <i data-lucide="external-link" class="w-4 h-4"></i>Open Link
+        </a>` : '';
+
+      content.innerHTML = `
+        <button id="closeDrawer" class="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-xl bg-bg border border-secondary cursor-pointer transition-colors duration-200 hover:border-cta focus-visible:outline focus-visible:outline-2 focus-visible:outline-cta" aria-label="Close">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+        <div class="w-16 h-16 rounded-2xl bg-bg flex items-center justify-center border border-secondary mb-6">
+          <i data-lucide="${icon}" class="w-8 h-8 text-cta"></i>
+        </div>
+        <span class="text-xs font-body font-semibold px-3 py-1 rounded-full ${getStatusClass(node)}">${node.status}</span>
+        <h2 class="font-display text-2xl font-bold tracking-wide mt-4 mb-2">${node.name}</h2>
+        <p class="font-body text-dim leading-relaxed mb-6">${node.desc || ''}</p>
+        ${metricsHtml ? `<div class="mb-2">${metricsHtml}</div>` : ''}
+        ${childrenHtml}
+        <div class="mt-6">
+          <h4 class="font-display text-sm tracking-widest text-dim uppercase mb-3">Tags</h4>
+          <div class="flex flex-wrap gap-2">${tagHtml}</div>
+        </div>
+        ${linkHtml}
+      `;
+
+      overlay.classList.add('open');
+      panel.classList.add('open');
+      lucide.createIcons();
+
+      document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+      overlay.addEventListener('click', closeDrawer);
+    }
+
+    function closeDrawer() {
+      document.getElementById('modalOverlay').classList.remove('open');
+      document.getElementById('modalPanel').classList.remove('open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+    // ===== D3 FORCE GRAPH =====
+    const palette = { center: '#a855f7', category: '#fb923c', project: '#60a5fa', infra: '#34d399' };
+
+    function drawGraph() {
+      const svg = d3.select('#graph');
+      svg.selectAll('*').remove();
+      const rect = svg.node().getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      svg.attr('viewBox', [0, 0, w, h]);
+
+      const g = svg.append('g');
+
+      // Glow filter
+      const defs = svg.append('defs');
+      const filter = defs.append('filter').attr('id', 'nodeGlow');
+      filter.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'blur');
+      const merge = filter.append('feMerge');
+      merge.append('feMergeNode').attr('in', 'blur');
+      merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+      const nodesCopy = nodes.map(d => ({...d}));
+      const linksCopy = links.map(d => ({...d}));
+
+      const link = g.append('g').selectAll('line').data(linksCopy).join('line')
+        .attr('stroke', 'rgba(148,16已全額借出,0.2)')
+        .attr('stroke-width', d => 0.5 + d.strength * 2);
+
+      const node = g.append('g').selectAll('g').data(nodesCopy).join('g').style('cursor', 'pointer');
+
+      const radius = d => d.layer === 'center' ? 28 : Math.max(8, d.importance * 0.55);
+
+      node.append('circle')
+        .attr('r', radius)
+        .attr('fill', d => palette[d.layer])
+        .attr('filter', 'url(#nodeGlow)')
+        .attr('opacity', 0.9);
+
+      node.append('text')
+        .text(d => d.name)
+        .attr('text-anchor', 'middle')
+        .attr('dy', d => -radius(d) - 8)
+        .attr('fill', '#F8FAFC')
+        .attr('font-family', 'Exo 2, sans-serif')
+        .attr('font-size', d => d.layer === 'center' ? 13 : 11)
+        .attr('font-weight', 600)
+        .attr('paint-order', 'stroke')
+        .attr('stroke', '#0F172A')
+        .attr('stroke-width', 3);
+
+      const sim = d3.forceSimulation(nodesCopy)
+        .force('link', d3.forceLink(linksCopy).id(d => d.id).distance(d => 60 + (1 - d.strength) * 80))
+        .force('charge', d3.forceManyBody().strength(d => d.layer === 'center' ? -600 : -250))
+        .force('collision', d3.forceCollide().radius(d => radius(d) + 10))
+        .force('center', d3.forceCenter(w / 2, h / 2));
+
+      sim.on('tick', () => {
+        link.attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+      });
+
+      const drag = d3.drag()
+        .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; });
+
+      node.call(drag).on('click', (_, d) => {
+        const orig = nodes.find(n => n.id === d.id);
+        if (orig) openDrawer(orig);
+      });
+
+      svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => g.attr('transform', e.transform)));
+    }
+
+    // ===== VIEW TOGGLE =====
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.view-btn').forEach(b => {
+          b.classList.remove('active');
+          b.classList.add('bg-primary', 'text-dim', 'border', 'border-secondary');
+        });
+        btn.classList.add('active');
+        btn.classList.remove('bg-primary', 'text-dim', 'border', 'border-secondary');
+
+        const view = btn.dataset.view;
+        document.getElementById('gridView').classList.toggle('hidden', view !== 'grid');
+        document.getElementById('graphSection').classList.toggle('hidden', view !== 'graph');
+        if (view === 'graph') {
+          setTimeout(drawGraph, 50);
+        }
+      });
+    });
+
+    // ===== COUNT UP =====
+    function countUp() {
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('.count-up').forEach(el => {
+        const target = parseInt(el.dataset.target);
+        if (reducedMotion) { el.textContent = target; return; }
+        let current = 0;
+        const step = Math.ceil(target / 30);
+        const timer = setInterval(() => {
+          current += step;
+          if (current >= target) { current = target; clearInterval(timer); }
+          el.textContent = current;
+        }, 40);
+      });
+    }
+
+    // ===== BOOT =====
+    renderBentoGrid();
+    countUp();
+  </script>
+
+  <div class="progress-panel" id="progressPanel">
+    <div class="progress-toggle" onclick="toggleProgress()">
+      <h3>📊 專案進度</h3>
+      <span id="progressToggleIcon">▼</span>
+    </div>
+    <div id="progressBars"></div>
+  </div>
+  <script>
+    const progressData = [
+      { id: "apple_notes", name: "Apple Notes 精煉", pct: 100, cls: "fill-done", detail: "穩定運行" },
+      { id: "rdog", name: "RDOG Skill", pct: 100, cls: "fill-done", detail: "v1.0 定版" },
+      { id: "trading_system", name: "自動下單", pct: 95, cls: "fill-done", detail: "上線 + 去重" },
+      { id: "signal_bot", name: "Signal Bot", pct: 95, cls: "fill-done", detail: "每日 21:00" },
+      { id: "bitfinex", name: "Bitfinex 放貸", pct: 90, cls: "fill-done", detail: "Live USDT 全額借出" },
+      { id: "speech", name: "養蝦心得", pct: 90, cls: "fill-done", detail: "簡報完成" },
+      { id: "trade_bible", name: "交易聖經", pct: 75, cls: "fill-active", detail: "V11 訓練中" },
+      { id: "skill_dev", name: "Skill 開發", pct: 70, cls: "fill-active", detail: "持續擴充" },
+      { id: "pocus", name: "Obsidian 知識庫", pct: 60, cls: "fill-active", detail: "7/20+ 主題" },
+      { id: "ig_med", name: "IG 醫美粉專", pct: 40, cls: "fill-active", detail: "8 篇待審" },
+      { id: "poly", name: "Polymarket 套利", pct: 10, cls: "fill-planned", detail: "計劃階段" },
+    ];
+    function renderProgress() {
+      const container = document.getElementById('progressBars');
+      container.innerHTML = progressData.map(p => `
+        <div class="progress-item" onclick="document.querySelectorAll('circle').forEach(c => { if(c.__data__ && c.__data__.id==='${p.id}') c.dispatchEvent(new Event('click')); })">
+          <div class="progress-label">
+            <span class="progress-name">${p.name}</span>
+            <span class="progress-pct">${p.pct}% · ${p.detail}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill ${p.cls}" style="width:0%"></div>
+          </div>
+        </div>
+      `).join('');
+      // Animate bars
+      setTimeout(() => {
+        container.querySelectorAll('.progress-fill').forEach((el, i) => {
+          el.style.width = progressData[i].pct + '%';
+        });
+      }, 300);
+    }
+    function toggleProgress() {
+      const panel = document.getElementById('progressPanel');
+      const icon = document.getElementById('progressToggleIcon');
+      panel.classList.toggle('collapsed');
+      icon.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+    }
+    renderProgress();
+  </script>
+</body>
+</html>

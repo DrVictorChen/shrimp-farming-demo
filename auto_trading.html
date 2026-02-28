@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>自動下單專案總覽儀表板 V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0F172A',
+            card: '#1E293B',
+            border: '#334155',
+            cta: '#22C55E',
+            txt: '#F8FAFC',
+            muted: '#94A3B8',
+            cyan: '#06B6D4',
+            blue: '#3B82F6',
+            purple: '#8B5CF6',
+            amber: '#F59E0B',
+            red: '#EF4444',
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            exo: ['"Exo 2"', 'sans-serif'],
+          },
+          borderRadius: {
+            card: '16px',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Exo 2', sans-serif;
+      background: #0F172A;
+      color: #F8FAFC;
+      background-image:
+        radial-gradient(circle at 15% 5%, rgba(6,182,212,0.07) 0%, transparent 40%),
+        radial-gradient(circle at 85% 95%, rgba(139,92,246,0.05) 0%, transparent 40%),
+        linear-gradient(rgba(51,65,85,0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(51,65,85,0.15) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+      min-height: 100vh;
+    }
+
+    .glass-card {
+      background: rgba(30,41,59,0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      transition: transform 250ms ease, box-shadow 250ms ease;
+    }
+    .glass-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(6,182,212,0.12), 0 0 0 1px rgba(6,182,212,0.15);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .glass-card:hover { transform: none; box-shadow: none; }
+      .reveal { animation: none !important; opacity: 1 !important; }
+    }
+
+    .reveal {
+      opacity: 0;
+      animation: fadeUp 0.5s ease forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tag-chip {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: rgba(6,182,212,0.12);
+      color: #06B6D4;
+      border: 1px solid rgba(6,182,212,0.25);
+    }
+
+    .filter-btn {
+      background: rgba(51,65,85,0.5);
+      color: #94A3B8;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Exo 2', sans-serif;
+      transition: all 200ms;
+    }
+    .filter-btn:hover { border-color: #06B6D4; color: #F8FAFC; }
+    .filter-btn.active {
+      background: rgba(6,182,212,0.2);
+      color: #06B6D4;
+      border-color: #06B6D4;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 8px; color: #06B6D4; font-weight: 600; border-bottom: 1px solid #334155; background: rgba(6,182,212,0.05); }
+    td { padding: 8px; border-bottom: 1px solid rgba(51,65,85,0.5); vertical-align: top; }
+    code { background: rgba(6,182,212,0.1); color: #06B6D4; padding: 1px 6px; border-radius: 6px; font-size: 12px; word-break: break-all; }
+
+    .ok { color: #22C55E; font-weight: 600; }
+    .warn { color: #F59E0B; font-weight: 600; }
+
+    /* Flow chart */
+    .flow-wrap {
+      background: linear-gradient(145deg, #060a13 0%, #0d1a2a 50%, #0a1222 100%);
+      border-radius: 16px;
+      padding: 28px 20px;
+      overflow-x: auto;
+      border: 1px solid rgba(6,182,212,0.2);
+      box-shadow: inset 0 0 60px rgba(6,182,212,0.03), 0 0 30px rgba(6,182,212,0.06);
+    }
+    .flow-wrap svg { display: block; margin: 0 auto; }
+
+    .search-input {
+      flex: 1; min-width: 200px;
+      background: rgba(15,23,42,0.6);
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: #F8FAFC;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 200ms;
+    }
+    .search-input:focus { border-color: #06B6D4; }
+    .search-input::placeholder { color: #64748B; }
+
+    .section-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; margin-right: 10px; flex-shrink: 0; }
+  </style>
+</head>
+<body class="font-exo">
+  <div class="max-w-[1280px] mx-auto px-4 py-6">
+
+    <!-- Back button -->
+    <a href="index.html" class="reveal inline-flex items-center gap-2 text-muted hover:text-cyan transition-colors text-sm mb-5" style="animation-delay:0ms">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <span>回到總覽</span>
+    </a>
+
+    <!-- Hero -->
+    <section class="reveal glass-card p-8 mb-6 relative overflow-hidden" style="animation-delay:50ms; background: linear-gradient(135deg, rgba(6,182,212,0.1), rgba(139,92,246,0.08), rgba(30,41,59,0.9));">
+      <div class="absolute inset-0 opacity-10" style="background: radial-gradient(circle at 80% 20%, #06B6D4, transparent 50%)"></div>
+      <div class="relative z-10">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="section-icon bg-cyan/20"><i data-lucide="bot" class="w-5 h-5 text-cyan"></i></div>
+          <p class="text-muted text-sm">離線單檔 HTML · 資料快照 2026-02-25 22:55</p>
+        </div>
+        <h1 class="font-orbitron text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-cyan via-blue to-purple bg-clip-text text-transparent">
+          自動下單專案儀表板
+        </h1>
+        <p class="text-muted text-base mb-6">無極動能心法 / G6 多週期動能策略 · 全自動排程與風控</p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="kpiGrid"></div>
+      </div>
+    </section>
+
+    <!-- Strategy Logic -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:100ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-purple/20"><i data-lucide="brain" class="w-5 h-5 text-purple"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">策略邏輯 — G6 多週期動能</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="calculator" class="w-4 h-4 text-cyan"></i><span class="font-semibold text-cyan text-sm">策略計算</span></div>
+          <p class="text-muted text-sm">呼叫 <code>run_strategy</code> 輸出目前/下週持倉，形成待買待賣清單。策略計算器 <code>strategy_calculator_g6.py</code> 整合 FinLab 資料。</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="repeat" class="w-4 h-4 text-amber"></i><span class="font-semibold text-amber text-sm">換股條件</span></div>
+          <p class="text-muted text-sm">透過 <code>is_rotation_day</code> 判斷 FinLab 交易日曆，只有換股日才執行買賣委託。非換股日僅補單與記錄。</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="shield-check" class="w-4 h-4 text-cta"></i><span class="font-semibold text-cta text-sm">風控整合</span></div>
+          <p class="text-muted text-sm">警示股/處置股即時檢查（證交所 API + 本地清單），退單自動解析 <code>op_code=88</code>，標記 <code>warning_stocks.json</code>。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Modules -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:150ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-blue/20"><i data-lucide="layout-grid" class="w-5 h-5 text-blue"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">系統模組</h2>
+      </div>
+      <div class="flex flex-wrap gap-2 mb-4" id="moduleToolbar">
+        <button class="filter-btn active" data-group="all">全部</button>
+        <button class="filter-btn" data-group="策略主流程">策略主流程</button>
+        <button class="filter-btn" data-group="排程">排程</button>
+        <button class="filter-btn" data-group="風控">風控</button>
+        <button class="filter-btn" data-group="下單">下單</button>
+        <button class="filter-btn" data-group="報表">報表</button>
+        <input class="search-input" id="moduleSearch" placeholder="搜尋檔名、路徑、關鍵字…" />
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" id="moduleGrid"></div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:200ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-cyan/20"><i data-lucide="workflow" class="w-5 h-5 text-cyan"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">系統架構流程</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <div class="glass-card p-4 text-center border-t-2 border-t-cyan">
+          <i data-lucide="clock" class="w-6 h-6 text-cyan mx-auto mb-2"></i>
+          <p class="font-semibold text-sm mb-1">排程觸發</p>
+          <p class="text-muted text-xs">macOS launchd 每日 22:00 啟動 <code>run_daily.sh</code></p>
+        </div>
+        <div class="glass-card p-4 text-center border-t-2 border-t-blue">
+          <i data-lucide="cpu" class="w-6 h-6 text-blue mx-auto mb-2"></i>
+          <p class="font-semibold text-sm mb-1">策略計算</p>
+          <p class="text-muted text-xs"><code>main_g6.py --execute</code> 啟動 G6 策略引擎</p>
+        </div>
+        <div class="glass-card p-4 text-center border-t-2 border-t-amber">
+          <i data-lucide="arrow-right-left" class="w-6 h-6 text-amber mx-auto mb-2"></i>
+          <p class="font-semibold text-sm mb-1">下單執行</p>
+          <p class="text-muted text-xs">Shioaji 零股委託，補單 +2%、賣出 -2%</p>
+        </div>
+        <div class="glass-card p-4 text-center border-t-2 border-t-purple">
+          <i data-lucide="send" class="w-6 h-6 text-purple mx-auto mb-2"></i>
+          <p class="font-semibold text-sm mb-1">通知報告</p>
+          <p class="text-muted text-xs">Telegram 推播策略報告與下單結果</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Flow Chart -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:250ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-amber/20"><i data-lucide="git-branch" class="w-5 h-5 text-amber"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">程式執行工作流</h2>
+      </div>
+      <p class="text-muted text-sm mb-3">每日 22:00 由 macOS launchd 觸發 <code>run_daily.sh</code> → <code>main_g6.py --execute</code></p>
+      <div class="flow-wrap" id="flowChart"></div>
+    </section>
+
+    <!-- Two-col: Settings + Paths -->
+    
+
+    <!-- Risk Control -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:350ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-red/20"><i data-lucide="shield-alert" class="w-5 h-5 text-red"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">風控機制</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="alert-triangle" class="w-4 h-4 text-red"></i><span class="font-semibold text-red text-sm">警示股偵測</span></div>
+          <p class="text-muted text-sm">整合證交所處置股 API + 本地 <code>warning_stocks.json</code>，自動標記並跳過警示標的。</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="search" class="w-4 h-4 text-amber"></i><span class="font-semibold text-amber text-sm">退單解析</span></div>
+          <p class="text-muted text-sm"><code>parse_order_rejection()</code> 解析 <code>op_code=88</code> 等退單原因，自動寫入警示清單。</p>
+        </div>
+        <div class="glass-card p-4">
+          <div class="flex items-center gap-2 mb-2"><i data-lucide="git-compare" class="w-4 h-4 text-cyan"></i><span class="font-semibold text-cyan text-sm">庫存比對</span></div>
+          <p class="text-muted text-sm"><code>order_tracker.py</code> 查詢永豐庫存，比對策略應持有，生成補買/補賣清單。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Telegram -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:400ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-blue/20"><i data-lucide="message-circle" class="w-5 h-5 text-blue"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">Telegram 通知設定</h2>
+      </div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="glass-card p-4">
+          <p class="font-semibold text-sm text-blue mb-2">通知模組</p>
+          <p class="text-muted text-sm"><code>utils/notification.py</code> 提供策略報告與下單結果推播，G6 另有 <code>_send_report</code> 即時訊息。</p>
+        </div>
+        <div class="glass-card p-4">
+          <p class="font-semibold text-sm text-blue mb-2">設定參數</p>
+          <p class="text-muted text-sm">已整合 Telegram 推播通知。退單異常會額外推播提醒。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Git Logs -->
+    <section class="reveal glass-card p-6 mb-5" style="animation-delay:450ms">
+      <div class="flex items-center mb-4">
+        <div class="section-icon bg-purple/20"><i data-lucide="git-commit" class="w-5 h-5 text-purple"></i></div>
+        <h2 class="font-orbitron text-lg font-bold text-txt">最近修復紀錄</h2>
+      </div>
+      <div class="overflow-x-auto"><table id="gitTable"></table></div>
+      <p class="text-muted text-xs mt-2" id="gitNote"></p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="reveal text-center text-muted text-xs py-6" style="animation-delay:500ms">
+      <p>自動下單專案儀表板 V2 · 資料快照 2026-02-25 22:55</p>
+    </footer>
+  </div>
+
+  <script>
+    const D = {
+      summary: {
+        projectName: "無極動能心法 / 自動下單",
+        projectRoot: "~/auto_trading/",
+        scannedFileCount: 74, scannedDirCount: 11, pythonFileCount: 13,
+        dataFileCount: 3, logFileCount: 48, gitCommitsFound: 3,
+        envFileDetected: true, defaultFund: "100000"
+      },
+      modules: [
+        { group:"策略主流程", name:"G6 主程式協調", file:"main_g6.py", mtime:"2026-02-25 22:23:15", detail:"入口流程：策略計算 -> 補單檢查 -> 條件式換股下單；`--execute` 啟用實際委託。", tags:["run_and_check_signals","check_and_fill_orders","is_rotation_day"] },
+        { group:"策略主流程", name:"G6 策略計算器", file:"strategy_calculator_g6.py", mtime:"2026-02-25 12:11:08", detail:"呼叫原始策略 run_strategy，輸出目前/下週持倉，並形成待買待賣清單。", tags:["run_strategy","position_info","to_buy/to_sell"] },
+        { group:"策略主流程", name:"舊版 25星流程", file:"main.py + strategy_calculator.py", mtime:"2026-02-12 16:27:00", detail:"保留舊策略流程，與 G6 並存，可視為歷史/備援路徑。", tags:["legacy","tg_notify","OrderExecutorModule"] },
+        { group:"排程", name:"每日自動執行腳本", file:"run_daily.sh", mtime:"2026-02-25 12:22:51", detail:"供 launchd 觸發，載入 .env 後執行 python main_g6.py --execute。", tags:["launchd","22:00","--execute"] },
+        { group:"排程", name:"通用執行腳本", file:"run_trading.sh", mtime:"2026-02-12 16:27:00", detail:"可搭配 crontab/手動執行，主要對應舊版主程式 main.py。", tags:["crontab","main.py","legacy"] },
+        { group:"風控", name:"警示股/處置股風控", file:"utils/stock_warning.py", mtime:"2026-02-25 22:32:41", detail:"整合證交所處置股 API + 本地警示清單；解析退單訊息（含 op_code=88）。", tags:["warning_stocks.json","parse_order_rejection","fetch_punished_stocks"] },
+        { group:"風控", name:"庫存比對與補單判斷", file:"utils/order_tracker.py", mtime:"2026-02-23 23:36:12", detail:"查詢永豐庫存、比對策略應持有，生成補買/補賣清單。", tags:["list_positions","compare_with_strategy","generate_fill_up_orders"] },
+        { group:"下單", name:"直接補單與換股委託", file:"main_g6.py", mtime:"2026-02-25 22:23:15", detail:"補單採直接 Shioaji 零股委託（+2%），換股日條件成立才執行買賣。", tags:["IntradayOdd","extra bid 2%","rotation guard"] },
+        { group:"下單", name:"FinLab OrderExecutor 封裝", file:"order_executor.py", mtime:"2026-02-22 21:36:57", detail:"封裝 Position.from_report + OrderExecutor；資金取 max(DEFAULT_FUND, 帳戶估算)。", tags:["odd_lot","DEFAULT_FUND","SinopacAccount"] },
+        { group:"報表", name:"策略/下單 Telegram 通知", file:"utils/notification.py", mtime:"2026-02-12 16:27:00", detail:"提供策略報告與下單結果推播；G6 另有 _send_report 即時訊息。", tags:["sendMessage","tg_notify","send_order_result"] },
+        { group:"報表", name:"持倉狀態與執行紀錄", file:"data/position_state.csv + logs/", mtime:"position_state: 2026-02-25 22:23:26", detail:"本地持倉快照與每日執行日誌，供追溯訊號與下單結果。", tags:["position_state.csv","trading_*.log","無極動能心法_*.log"] }
+      ],
+      settings: [
+        { key:"FINLAB_TOKEN", source:".env", class:"敏感憑證", status:"已設定", value:"****** (已遮罩)" },
+        { key:"DEFAULT_FUND", source:".env", class:"資金參數", status:"已設定", value:"100000" },
+        { key:"AUTO_UPDATE_FINLAB", source:".env", class:"執行參數", status:"已設定", value:"true/false 類布林開關" }
+      ],
+      paths: [
+        { name:"專案根目錄", path:"~/auto_trading/", note:"程式與設定主體" },
+        { name:"G6 主流程入口", path:"main_g6.py", note:"策略計算與下單協調" },
+        { name:"排程腳本", path:"run_daily.sh", note:"供 launchd 觸發每日執行" },
+        { name:"持倉快照", path:"data/position_state.csv", note:"本地持倉追蹤" },
+        { name:"警示股清單", path:"data/warning_stocks.json", note:"風控本地記錄" },
+        { name:"執行日誌目錄", path:"logs/", note:"策略與下單執行日誌" },
+        { name:"儀表板輸出", path:"~/reports/dashboard.html", note:"離線開啟目標檔" }
+      ],
+      gitLogs: [
+        { hash:"060e779", date:"2026-02-25 22:32:44 +0800", author:"VC", message:"fix: treat '委託處理中' as successful order, not rejection" },
+        { hash:"527130b", date:"2026-02-25 22:32:12 +0800", author:"VC", message:"fix: f-string backslash bug + is_rotation_day guard for rotation orders" },
+        { hash:"069a90a", date:"2026-02-20 01:45:19 +0800", author:"VC", message:"Initial commit: 自動下單系統" }
+      ]
+    };
+
+    // KPI
+    const kpis = [
+      ["掃描檔案","file-text", D.summary.scannedFileCount],
+      ["掃描目錄","folder", D.summary.scannedDirCount],
+      ["Python 檔","file-code", D.summary.pythonFileCount],
+      ["Log 檔","scroll-text", D.summary.logFileCount],
+      ["Git 提交","git-commit", D.summary.gitCommitsFound],
+      ["DEFAULT_FUND","banknote", D.summary.defaultFund],
+    ];
+    document.getElementById("kpiGrid").innerHTML = kpis.map(([l,ic,v]) => `
+      <div class="glass-card p-3 text-center">
+        <i data-lucide="${ic}" class="w-4 h-4 text-cyan mx-auto mb-1"></i>
+        <div class="text-muted text-xs">${l}</div>
+        <div class="font-orbitron text-xl font-bold text-txt">${v}</div>
+      </div>
+    `).join("");
+
+    // Modules
+    const groupIcons = {"策略主流程":"brain","排程":"clock","風控":"shield-alert","下單":"arrow-right-left","報表":"bar-chart-3"};
+    const groupColors = {"策略主流程":"purple","排程":"cyan","風控":"red","下單":"amber","報表":"blue"};
+
+    function renderModules(group="all", kw="") {
+      const key = kw.trim().toLowerCase();
+      const rows = D.modules.filter(m => {
+        const gOk = group==="all" || m.group===group;
+        const hay = `${m.group} ${m.name} ${m.file} ${m.detail} ${m.tags.join(" ")}`.toLowerCase();
+        return gOk && (key==="" || hay.includes(key));
+      });
+      const el = document.getElementById("moduleGrid");
+      if(!rows.length){ el.innerHTML='<p class="text-muted text-sm col-span-full">查無符合條件的模組。</p>'; return; }
+      el.innerHTML = rows.map(m => {
+        const c = groupColors[m.group]||"cyan";
+        return `<div class="glass-card p-4 border-l-2 border-l-${c}">
+          <div class="flex items-center gap-2 mb-2">
+            <i data-lucide="${groupIcons[m.group]||'box'}" class="w-4 h-4 text-${c}"></i>
+            <span class="tag-chip">${m.group}</span>
+          </div>
+          <h3 class="font-semibold text-sm mb-1">${m.name}</h3>
+          <p class="text-muted text-xs mb-1"><code>${m.file}</code> · ${m.mtime}</p>
+          <p class="text-muted text-sm mb-2">${m.detail}</p>
+          <div class="flex flex-wrap gap-1">${m.tags.map(t=>`<span class="tag-chip">${t}</span>`).join("")}</div>
+        </div>`;
+      }).join("");
+      lucide.createIcons();
+    }
+
+    document.getElementById("moduleToolbar").addEventListener("click", e => {
+      const btn = e.target.closest("button[data-group]");
+      if(!btn) return;
+      document.querySelectorAll("#moduleToolbar button").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      renderModules(btn.dataset.group, document.getElementById("moduleSearch").value);
+    });
+    document.getElementById("moduleSearch").addEventListener("input", () => {
+      const g = document.querySelector("#moduleToolbar button.active")?.dataset.group||"all";
+      renderModules(g, document.getElementById("moduleSearch").value);
+    });
+
+    // Settings
+    document.getElementById("settingsTable").innerHTML = `<thead><tr><th>設定鍵</th><th>類型</th><th>來源</th><th>狀態</th><th>值</th></tr></thead><tbody>${D.settings.map(s=>`<tr><td><code>${s.key}</code></td><td class="text-muted">${s.class}</td><td class="text-muted">${s.source}</td><td class="${s.status.includes('已')?'ok':'warn'}">${s.status}</td><td><code>${s.value}</code></td></tr>`).join("")}</tbody>`;
+
+    // Paths
+    document.getElementById("pathsTable").innerHTML = `<thead><tr><th>用途</th><th>路徑</th><th>說明</th></tr></thead><tbody>${D.paths.map(p=>`<tr><td>${p.name}</td><td><code>${p.path}</code></td><td class="text-muted">${p.note}</td></tr>`).join("")}</tbody>`;
+
+    // Git
+    document.getElementById("gitTable").innerHTML = `<thead><tr><th>#</th><th>Commit</th><th>日期</th><th>作者</th><th>訊息</th></tr></thead><tbody>${D.gitLogs.map((g,i)=>`<tr><td class="text-muted">${i+1}</td><td><code>${g.hash}</code></td><td class="text-muted">${g.date}</td><td>${g.author}</td><td>${g.message}</td></tr>`).join("")}</tbody>`;
+    document.getElementById("gitNote").textContent = D.gitLogs.length < 15 ? `目前倉庫可提取提交數為 ${D.gitLogs.length} 筆，已全數顯示。` : "已顯示最近 15 筆提交。";
+
+    // Init
+    renderModules();
+    lucide.createIcons();
+
+    /* ========== Dark Tech Flowchart (reused from V1) ========== */
+    (function(){
+      const W=960,COL=480,RH=52,RW=200,DH=50,DW=140,GAP=70,PAD=30;
+      const font='font-family="Exo 2,sans-serif"';
+      const S={
+        trigger:{f:'#023e58',s:'#06B6D4',t:'#06B6D4',g:'rgba(6,182,212,0.35)'},
+        process:{f:'#0F172A',s:'#3B82F6',t:'#93C5FD',g:'rgba(59,130,246,0.2)'},
+        decision:{f:'#1c1a00',s:'#F59E0B',t:'#FDE68A',g:'rgba(245,158,11,0.25)'},
+        action:{f:'#002e1a',s:'#22C55E',t:'#86EFAC',g:'rgba(34,197,94,0.25)'},
+        sell:{f:'#2d0010',s:'#EF4444',t:'#FCA5A5',g:'rgba(239,68,68,0.25)'},
+        warn:{f:'#3b0000',s:'#EF4444',t:'#FCA5A5',g:'rgba(239,68,68,0.3)'},
+        notify:{f:'#180033',s:'#8B5CF6',t:'#C4B5FD',g:'rgba(139,92,246,0.2)'},
+        dim:{f:'#1E293B',s:'#64748B',t:'#94A3B8',g:'rgba(100,116,139,0.15)'},
+        final:{f:'#0d2818',s:'#22C55E',t:'#86EFAC',g:'rgba(34,197,94,0.3)'},
+      };
+      const nodes=[
+        ['A','launchd 22:00','run_daily.sh','trigger',0,0],
+        ['B','初始化策略計算器','G6StrategyCalculator()','process',0,1],
+        ['C','執行策略計算','run_and_check_signals()','process',0,2],
+        ['D','警示股/處置股檢查','stock_warning.py','process',0,3],
+        ['E','補單需求檢查','check_and_fill_orders()','process',0,4],
+        ['F','需要補買？','','decision',0,5],
+        ['G','執行零股補買','Shioaji +2%','action',2,5],
+        ['H','有換股訊號？','','decision',0,6.5],
+        ['I','無訊號，僅記錄','','dim',2,6.5],
+        ['J','是換股日？','FinLab 交易日曆','decision',0,8],
+        ['K','換股預告','log 預計買賣清單','notify',2,8],
+        ['L','賣出移除股','Shioaji -2%','sell',1,9.5],
+        ['M','買進新增股','Shioaji +2%','action',0,9.5],
+        ['N','有退單？','parse_order_rejection()','decision',0,11],
+        ['O','標記警示股','warning_stocks.json','warn',1,12.2],
+        ['P','Telegram 退單通知','請到券商 App 確認圈存','notify',0,12.2],
+        ['Q','儲存持倉＋發送報告','position_state.csv + TG','final',0,13.5],
+      ];
+      function pos(n){let x=COL;if(n[4]===1)x=COL-220;if(n[4]===2)x=COL+220;return{x,y:PAD+n[5]*GAP};}
+      function cx(n){return pos(n).x;}
+      function cy(n){return pos(n).y+(n[3]==='decision'?DH/2:RH/2);}
+      function bot(n){return[cx(n),pos(n).y+(n[3]==='decision'?DH:RH)];}
+      function top_(n){return[cx(n),pos(n).y];}
+      function lft(n){return[pos(n).x-(n[3]==='decision'?DW/2:RW/2),cy(n)];}
+      function rgt(n){return[pos(n).x+(n[3]==='decision'?DW/2:RW/2),cy(n)];}
+      let nMap={};nodes.forEach(n=>nMap[n[0]]=n);
+      const edges=[['A','B'],['B','C'],['C','D'],['D','E'],['E','F'],['F','G','是','r'],['F','H','否'],['G','H','','g2h'],['H','I','否','r'],['H','J','是'],['J','K','否','r'],['J','L','是','j2l'],['L','M','','l2m'],['M','N'],['N','O','有','n2o'],['N','Q','無'],['O','P','','o2p'],['P','Q'],['K','Q','','k2q'],['I','Q','','i2q']];
+      const totalH=PAD+14*GAP+RH+PAD;
+      let svg=`<svg width="${W}" height="${totalH}" viewBox="0 0 ${W} ${totalH}" xmlns="http://www.w3.org/2000/svg">`;
+      svg+=`<defs>`;
+      for(let[k,v]of Object.entries(S)){svg+=`<filter id="glow-${k}" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feFlood flood-color="${v.g}" result="c"/><feComposite in="c" in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;}
+      svg+=`<marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#3B82F6" opacity="0.8"/></marker>`;
+      svg+=`<marker id="ah-y" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#F59E0B" opacity="0.8"/></marker>`;
+      svg+=`<marker id="ah-n" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#64748B" opacity="0.6"/></marker>`;
+      svg+=`</defs>`;
+      for(let gx=0;gx<W;gx+=40)for(let gy=0;gy<totalH;gy+=40){svg+=`<circle cx="${gx}" cy="${gy}" r="0.5" fill="rgba(59,130,246,0.08)"/>`;}
+      function mkPath(d,marker){svg+=`<path d="${d}" fill="none" stroke="${marker==='ah-y'?'#F59E0B':marker==='ah-n'?'#64748B':'#3B82F6'}" stroke-width="1.5" ${marker==='ah-n'?'opacity="0.5"':''} marker-end="url(#${marker})" style="filter:drop-shadow(0 0 3px ${marker==='ah-y'?'rgba(245,158,11,0.3)':'rgba(59,130,246,0.2)'})" />`;}
+      function edgeLabel(x,y,t,color){svg+=`<rect x="${x-12}" y="${y-9}" width="24" height="18" rx="4" fill="#0a1222" stroke="${color}" stroke-width="0.8" opacity="0.9"/><text x="${x}" y="${y+1}" text-anchor="middle" dominant-baseline="central" ${font} font-size="10" fill="${color}" font-weight="600">${t}</text>`;}
+      edges.forEach(e=>{let from=nMap[e[0]],to=nMap[e[1]],lbl=e[2]||'',route=e[3]||'';let marker=lbl==='是'||lbl==='有'?'ah-y':lbl==='否'||lbl==='無'?'ah-n':'ah';if(route==='r'){let p1=rgt(from),p2=lft(to);mkPath(`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`,marker);if(lbl)edgeLabel((p1[0]+p2[0])/2,(p1[1]+p2[1])/2-14,lbl,marker==='ah-y'?'#F59E0B':'#64748B');}else if(route==='g2h'){let p1=bot(from),p2=top_(to);mkPath(`M${p1[0]},${p1[1]} L${p1[0]},${p2[1]-15} L${p2[0]},${p2[1]-15} L${p2[0]},${p2[1]}`,marker);}else if(route==='j2l'){let p1=lft(from),p2=top_(to);mkPath(`M${p1[0]},${p1[1]} L${cx(to)},${p1[1]} L${p2[0]},${p2[1]}`,marker);if(lbl)edgeLabel(p1[0]-20,p1[1]-14,lbl,'#F59E0B');}else if(route==='l2m'){let p1=rgt(from),p2=lft(to);mkPath(`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`,marker);}else if(route==='n2o'){let p1=lft(from),p2=top_(to);mkPath(`M${p1[0]},${p1[1]} L${cx(to)},${p1[1]} L${p2[0]},${p2[1]}`,marker);if(lbl)edgeLabel(p1[0]-20,p1[1]-14,lbl,'#F59E0B');}else if(route==='o2p'){let p1=rgt(from),p2=lft(to);mkPath(`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`,marker);}else if(route==='k2q'){let p1=bot(from),p2=rgt(nMap['Q']);mkPath(`M${p1[0]},${p1[1]} L${p1[0]},${p2[1]} L${p2[0]},${p2[1]}`,marker);}else if(route==='i2q'){let p1=bot(from),p2=rgt(nMap['Q']);mkPath(`M${p1[0]},${p1[1]} L${p1[0]+40},${p1[1]} L${p1[0]+40},${p2[1]} L${p2[0]},${p2[1]}`,'ah-n');}else{let p1=bot(from),p2=top_(to);mkPath(`M${p1[0]},${p1[1]} L${p2[0]},${p2[1]}`,marker);if(lbl){let mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2;edgeLabel(mx+18,my,lbl,marker==='ah-y'?'#F59E0B':'#64748B');}}});
+      nodes.forEach(n=>{let p=pos(n),s=S[n[3]],filter=`filter="url(#glow-${n[3]})"`;if(n[3]==='decision'){let dx=cx(n),dy=cy(n);let pts=`${dx},${p.y} ${p.x+DW/2},${dy} ${dx},${p.y+DH} ${p.x-DW/2},${dy}`;svg+=`<polygon points="${pts}" fill="${s.f}" stroke="${s.s}" stroke-width="1.8" ${filter}/><text x="${dx}" y="${dy+1}" text-anchor="middle" dominant-baseline="central" ${font} font-size="12" fill="${s.t}" font-weight="600">${n[1]}</text>`;if(n[2])svg+=`<text x="${dx}" y="${dy+15}" text-anchor="middle" dominant-baseline="central" ${font} font-size="9" fill="${s.t}" opacity="0.6">${n[2]}</text>`;}else{let rx=p.x-RW/2,ry=p.y;svg+=`<rect x="${rx}" y="${ry}" width="${RW}" height="${RH}" rx="10" fill="${s.f}" stroke="${s.s}" stroke-width="1.5" ${filter}/>`;let hasS=n[2]!=='';svg+=`<text x="${p.x}" y="${ry+(hasS?RH/2-7:RH/2+1)}" text-anchor="middle" dominant-baseline="central" ${font} font-size="12" fill="${s.t}" font-weight="600">${n[1]}</text>`;if(hasS)svg+=`<text x="${p.x}" y="${ry+RH/2+9}" text-anchor="middle" dominant-baseline="central" ${font} font-size="10" fill="${s.t}" opacity="0.55">${n[2]}</text>`;}});
+      let lgd=[['觸發','trigger'],['處理','process'],['判斷','decision'],['買進','action'],['賣出','sell'],['警告','warn'],['通知','notify'],['完成','final']];let lx=60;lgd.forEach(l=>{let s=S[l[1]];svg+=`<rect x="${lx}" y="${totalH-32}" width="14" height="14" rx="3" fill="${s.f}" stroke="${s.s}" stroke-width="1"/><text x="${lx+18}" y="${totalH-24}" ${font} font-size="11" fill="#94A3B8">${l[0]}</text>`;lx+=18+l[0].length*12+14;});
+      svg+='</svg>';
+      document.getElementById('flowChart').innerHTML=svg;
+    })();
+  </script>
+</body>
+</html>

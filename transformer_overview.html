@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交易聖經 — Transformer 量化策略總覽 V2</title>
+<meta property="og:title" content="交易聖經 — Transformer 量化策略總覽 V2">
+<meta property="og:description" content="多版本 Ensemble Transformer 台股選股系統的完整架構、因子設計、訓練流程與實驗演進">
+<style>
+  :root {
+    --bg: #0F172A;
+    --card: #1E293B;
+    --border: #334155;
+    --text: #F8FAFC;
+    --muted: #94A3B8;
+    --accent: #22C55E;
+    --green: #22C55E;
+    --orange: #F59E0B;
+    --red: #EF4444;
+    --purple: #8B5CF6;
+    --pink: #f778ba;
+    --cyan: #06B6D4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+  h1 { font-size: 2rem; text-align: center; margin-bottom: 0.5rem; }
+  .subtitle { text-align: center; color: var(--muted); margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .update-tag { text-align: center; color: var(--muted); margin-bottom: 2rem; font-size: 0.8rem; }
+  .update-tag span { background: #1a3a1a; color: var(--green); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+
+  .flow-section { margin: 2.5rem 0; }
+  .flow-section h2 { font-size: 1.3rem; color: var(--accent); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+
+  .pipeline {
+    display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; align-items: flex-start;
+    padding: 1.5rem; background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  }
+  .pipeline-step {
+    flex: 0 0 140px; background: var(--bg); border-radius: 10px; padding: 1rem;
+    border: 2px solid var(--border); text-align: center; transition: all 0.2s;
+  }
+  .pipeline-step:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .pipeline-step .icon { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  .pipeline-step .title { font-weight: 600; font-size: 0.85rem; margin-bottom: 0.3rem; }
+  .pipeline-step .desc { font-size: 0.72rem; color: var(--muted); }
+  .pipeline-step .tag { display: inline-block; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; margin-top: 0.4rem; }
+  .tag-mac { background: #1f3a5f; color: var(--accent); }
+  .tag-win { background: #3b2f00; color: var(--orange); }
+  .tag-net { background: #1a3a1a; color: var(--green); }
+  .tag-auto { background: #2d1f5e; color: var(--purple); }
+  .arrow { flex: 0 0 20px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: var(--muted); padding-top: 1rem; }
+
+  .arch-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; }
+  @media (max-width: 768px) {
+    .arch-grid { grid-template-columns: 1fr; }
+    .pipeline-step { flex: 0 0 110px; }
+    body { padding: 1rem; }
+    .pipeline { gap: 0.4rem; padding: 1rem; }
+    .arrow { flex: 0 0 14px; font-size: 1rem; }
+  }
+
+  .arch-card { background: var(--card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); }
+  .arch-card h3 { color: var(--accent); margin-bottom: 0.8rem; font-size: 1.05rem; }
+  .arch-card ul { list-style: none; padding: 0; }
+  .arch-card li { padding: 0.3rem 0; font-size: 0.88rem; color: var(--muted); }
+  .arch-card li::before { content: "▸ "; color: var(--green); }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 0.85rem; }
+  th { background: var(--card); color: var(--accent); padding: 0.6rem; text-align: center; border-bottom: 2px solid var(--border); }
+  td { padding: 0.5rem 0.6rem; text-align: center; border-bottom: 1px solid var(--border); }
+  tr:hover { background: rgba(88,166,255,0.05); }
+  .tl { text-align: left !important; }
+  .best { color: var(--green); font-weight: 700; }
+
+  .ensemble-box { background: var(--card); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border); margin-top: 1rem; text-align: center; }
+  .ensemble-flow { display: flex; align-items: center; justify-content: center; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0; }
+  .model-badge { display: inline-block; padding: 0.4rem 0.8rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; }
+  .badge-v2 { background: #1f3a5f; color: var(--accent); border: 1px solid var(--accent); }
+  .badge-v25 { background: #2d1f5e; color: var(--purple); border: 1px solid var(--purple); }
+  .badge-v3 { background: #1a3a1a; color: var(--green); border: 1px solid var(--green); }
+  .badge-v9b { background: #3b2f00; color: var(--orange); border: 2px solid var(--orange); }
+  .badge-result { background: #3b2f00; color: var(--orange); border: 2px solid var(--orange); font-size: 1rem; padding: 0.6rem 1.2rem; }
+  .badge-dim { background: var(--card); color: var(--muted); border: 1px solid var(--border); }
+  .plus { font-size: 1.3rem; color: var(--muted); }
+
+  .timeline { position: relative; padding-left: 2rem; margin: 1.5rem 0; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; margin-bottom: 1.5rem; }
+  .timeline-item::before { content: ''; position: absolute; left: -2rem; top: 6px; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+  .timeline-item.done::before { background: var(--green); }
+  .timeline-item.active::before { background: var(--orange); box-shadow: 0 0 8px var(--orange); }
+  .timeline-item.failed::before { background: var(--red); }
+  .timeline-item h4 { font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .timeline-item p { font-size: 0.82rem; color: var(--muted); }
+  .timeline-item .metric { display: inline-block; background: var(--bg); padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; margin-top: 0.3rem; border: 1px solid var(--border); }
+
+  .infra-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem; }
+  .infra-card { background: var(--card); border-radius: 10px; padding: 1.2rem; border: 1px solid var(--border); }
+  .infra-card h4 { color: var(--purple); margin-bottom: 0.5rem; font-size: 0.95rem; }
+  .infra-card p { font-size: 0.82rem; color: var(--muted); }
+
+  .phase-box { background: var(--card); border-radius: 12px; padding: 1.2rem; border: 1px solid var(--border); margin-top: 1rem; }
+  .phase-row { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+  .phase-row:last-child { border-bottom: none; }
+  .phase-num { font-size: 1.5rem; width: 50px; text-align: center; }
+  .phase-info h4 { font-size: 0.9rem; margin-bottom: 0.2rem; }
+  .phase-info p { font-size: 0.78rem; color: var(--muted); }
+  .phase-status { margin-left: auto; font-size: 0.75rem; padding: 3px 10px; border-radius: 12px; font-weight: 600; white-space: nowrap; }
+  .status-done { background: #1a3a1a; color: var(--green); }
+  .status-active { background: #3b2f00; color: var(--orange); }
+  .status-plan { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+  .footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+  /* FinLab Report Browser */
+  .report-group { background: var(--card); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 0.6rem; }
+  .report-group summary { padding: 0.8rem 1.2rem; cursor: pointer; font-weight: 600; font-size: 0.92rem; list-style: none; display: flex; align-items: center; gap: 8px; }
+  .report-group summary::-webkit-details-marker { display: none; }
+  .report-group summary::before { content: "▸ "; color: var(--muted); font-size: 0.9rem; }
+  .report-group[open] summary::before { content: "▾ "; }
+  .report-grid { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 1.2rem 1rem; }
+  .report-grid a {
+    color: var(--muted); text-decoration: none; font-size: 0.76rem;
+    padding: 3px 9px; background: var(--bg); border-radius: 5px;
+    border: 1px solid var(--border); transition: all 0.15s; white-space: nowrap;
+  }
+  .report-grid a:hover { color: var(--accent); border-color: var(--accent); background: rgba(88,166,255,0.06); }
+
+  body { font-family: "Exo 2", sans-serif !important; max-width: 1200px; margin: 0 auto !important; padding: 2rem !important; background-color: var(--bg);
+    background-image: linear-gradient(rgba(148,16已全額借出,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148,16已全額借出,.08) 1px, transparent 1px);
+    background-size: 28px 28px; }
+  h1,h2,h3,h4,summary,.title { font-family: "Orbitron", sans-serif !important; letter-spacing: .02em; }
+  .flow-section,.arch-card,.infra-card,.phase-box,.report-group,.pipeline,.ensemble-box{background: rgba(30,41,59,.6);backdrop-filter: blur(10px);-webkit-backdrop-filter: blur(10px);border:1px solid var(--border);border-radius:16px !important;}
+  .flow-section{padding:1.2rem 1.2rem;margin:1.4rem 0;}
+  .pipeline-step,.infra-card,.model-badge,.report-grid a,.phase-status{border-radius:16px !important;}
+  .pipeline-step,.arch-card,.infra-card,.report-group,.phase-row,table tr{transition:all .25s ease;}
+  .pipeline-step:hover,.arch-card:hover,.infra-card:hover{transform:translateY(-6px);box-shadow:0 0 0 1px rgba(6,182,212,.35),0 10px 30px rgba(6,182,212,.2);}
+  .pipeline-step .icon{display:flex;justify-content:center;align-items:center;margin-bottom:.5rem;color:#06B6D4;}
+  .pipeline-step .icon svg{width:28px;height:28px;}
+  .timeline-item{padding: .2rem 0 .4rem .2rem;}
+  tr:hover{background:rgba(59,130,246,.12)!important;}
+  .report-group summary{font-family:"Orbitron",sans-serif;}
+  .stagger{opacity:0;transform:translateY(12px);animation:reveal .5s ease forwards;}
+  @keyframes reveal{to{opacity:1;transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;}}
+
+</style>
+<script>tailwind.config={theme:{extend:{colors:{bg:"#0F172A",card:"#1E293B",borderc:"#334155",cta:"#22C55E",textc:"#F8FAFC",muted:"#94A3B8",cyanx:"#06B6D4",bluex:"#3B82F6",purplex:"#8B5CF6",amberx:"#F59E0B",redx:"#EF4444"}}}};</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700&family=Orbitron:wght@500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<div style="margin:0 0 1rem;display:flex;justify-content:flex-start;">
+  <a href="index.html" style="display:inline-flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;border:1px solid var(--border);background:rgba(30,41,59,.75);padding:8px 14px;border-radius:16px;font-size:.86rem;">
+    <i data-lucide="arrow-left" style="width:16px;height:16px"></i> 回到總覽
+  </a>
+</div>
+
+
+<h1>交易聖經 — Transformer 量化策略總覽</h1>
+<p class="subtitle">多版本 Ensemble 架構 · 台灣股票市場 · 週頻調倉選股</p>
+<p class="update-tag"><span>Updated 2026-02-26 01:50</span> · 10 版實驗完成 · 已上線自動交易</p>
+
+
+<!-- ═══════ 1. 系統架構（最新版） ═══════ -->
+<div class="flow-section stagger">
+<h2>系統架構（當前最佳：V9b 5-Seed Ensemble）</h2>
+<div class="ensemble-box">
+  <div style="font-size:0.88rem; color:var(--muted); margin-bottom:1rem;">經 10 版實驗迭代，最終以 V9b（41 因子、因子去偏）5 種隨機種子等權 Ensemble 為最佳策略</div>
+  <div class="ensemble-flow">
+    <div class="model-badge badge-v9b">V9b<br><span style="font-size:0.65rem;font-weight:400">Seed 42</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-v9b">V9b<br><span style="font-size:0.65rem;font-weight:400">Seed 123</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-v9b">V9b<br><span style="font-size:0.65rem;font-weight:400">Seed 456</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-v9b">V9b<br><span style="font-size:0.65rem;font-weight:400">Seed 789</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-v9b">V9b<br><span style="font-size:0.65rem;font-weight:400">Seed 2026</span></div>
+    <span class="plus">→</span>
+    <div class="model-badge badge-result">Ensemble 選股<br><span style="font-size:0.7rem;font-weight:400">Sharpe > 2.3 · 已上線</span></div>
+  </div>
+  <div style="font-size:0.78rem; color:var(--muted); margin-top:0.8rem;">
+    每個 Seed 獨立 5-Fold Walk-Forward 訓練 → 5 組跨截面排序分數等權平均 → 選 Top-N 股票<br>
+    <span style="color:var(--green)">已通過回測驗證並接入自動下單系統</span>
+  </div>
+</div>
+
+<div style="margin-top:1rem;">
+<details>
+<summary style="cursor:pointer; color:var(--accent); font-size:0.9rem;">歷代架構演進（V2→V3 三版 Ensemble → V4-V8 探索 → V9b）</summary>
+<div class="ensemble-box" style="margin-top:0.5rem;">
+  <div style="font-size:0.82rem; color:var(--muted); margin-bottom:0.8rem;">早期三版 Ensemble（V2+V2.5+V3），後加入 V4a+V5 成為五版 Ensemble，最終被 V9b 單架構多 Seed 取代</div>
+  <div class="ensemble-flow">
+    <div class="model-badge badge-dim">V2<br><span style="font-size:0.6rem">34f</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-dim">V2.5<br><span style="font-size:0.6rem">38f</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-dim">V3<br><span style="font-size:0.6rem">41f</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-dim">V4a<br><span style="font-size:0.6rem">34f 5-Fold</span></div>
+    <span class="plus">+</span>
+    <div class="model-badge badge-dim">V5<br><span style="font-size:0.6rem">47f 動能</span></div>
+    <span style="font-size:0.8rem;color:var(--muted)">→ 5-Ens（已退役）</span>
+  </div>
+</div>
+</details>
+</div>
+</div>
+
+<!-- ═══════ 2. 訓練流程 ═══════ -->
+<div class="flow-section stagger">
+<h2>完整 Pipeline（因子建構 → 訓練 → 回測 → 自動下單）</h2>
+<div class="pipeline">
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="database"></i></div>
+    <div class="title">建構因子</div>
+    <div class="desc">價量、法人、營收、基本面等原始資料 → 多維因子矩陣</div>
+    <span class="tag tag-mac">Mac</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="package"></i></div>
+    <div class="title">打包 NPZ</div>
+    <div class="desc">DataFrame → 3D tensor<br>(日期 × 股票 × 因子)</div>
+    <span class="tag tag-mac">Mac</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="rocket"></i></div>
+    <div class="title">傳輸到 GPU</div>
+    <div class="desc">VPN 加密傳輸到 GPU 主機</div>
+    <span class="tag tag-net">VPN</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="flame"></i></div>
+    <div class="title">GPU 訓練</div>
+    <div class="desc">5-Fold Walk-Forward<br>多 Seed 平行訓練</div>
+    <span class="tag tag-win">GPU</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="line-chart"></i></div>
+    <div class="title">回測驗證</div>
+    <div class="desc">FinLab sim() 回測<br>週頻調倉 · Top-N</div>
+    <span class="tag tag-mac">Mac</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step">
+    <div class="icon"><i data-lucide="clipboard-list"></i></div>
+    <div class="title">績效報告</div>
+    <div class="desc">Sharpe / MDD / IC<br>胃納量分析</div>
+    <span class="tag tag-mac">Mac</span>
+  </div>
+  <div class="arrow">→</div>
+  <div class="pipeline-step" style="border-color:var(--green)">
+    <div class="icon"><i data-lucide="bot"></i></div>
+    <div class="title">自動下單</div>
+    <div class="desc">每週產出選股<br>自動預掛單</div>
+    <span class="tag tag-auto">Auto</span>
+  </div>
+</div>
+<p style="font-size:0.78rem; color:var(--muted); margin-top:0.8rem; text-align:center;">
+  全流程由 AI Agent 自動調度：因子建構 → 監控 GPU 訓練 → 拉取結果 → 回測 → 產報告 → 下單
+</p>
+</div>
+
+<!-- ═══════ 3. 因子體系 ═══════ -->
+<div class="flow-section stagger">
+<h2>因子體系演進</h2>
+<p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">從 V2 的 34 因子到 V9b 的 41 因子，核心改進是：<strong>移除導致小型股偏誤的因子，加入經驗證有效的動能與基本面因子</strong></p>
+<table>
+<thead><tr><th class="tl">分類</th><th>數量</th><th>V2<br><span style="font-weight:400;font-size:0.7rem">基線</span></th><th>V9b<br><span style="font-weight:400;font-size:0.7rem">最終</span></th><th class="tl">說明</th></tr></thead>
+<tbody>
+<tr><td class="tl" style="font-weight:600">A. 價量 Z-Score</td><td>6</td><td>✅</td><td>✅</td><td class="tl">收盤/開盤/高/低/成交量/成交金額（20日滾動標準化）</td></tr>
+<tr><td class="tl" style="font-weight:600">B. 價量衍生</td><td>10</td><td>✅</td><td>✅</td><td class="tl">日報酬、振幅、上下影線、量比、VWAP 偏離、量價背離、換手率</td></tr>
+<tr><td class="tl" style="font-weight:600">C. 動能</td><td>6</td><td>✅</td><td>✅</td><td class="tl">多時間尺度動能 + 跨截面相對強度</td></tr>
+<tr><td class="tl" style="font-weight:600">D. 波動率</td><td>4</td><td>✅</td><td>✅</td><td class="tl">ATR、實現波動率（多時間尺度）</td></tr>
+<tr><td class="tl" style="font-weight:600">E. 法人籌碼</td><td>5</td><td>6</td><td>5</td><td class="tl">外資/投信/自營商買賣超佔比（移除法人成交額佔比，與小型股高度相關）</td></tr>
+<tr><td class="tl" style="font-weight:600">F. 營收</td><td>3</td><td>✅</td><td>✅</td><td class="tl">營收年增率、月增率、連續成長月數</td></tr>
+<tr><td class="tl" style="font-weight:600;color:var(--green)">G. 基本面</td><td>4</td><td>—</td><td>✅</td><td class="tl">本益比、毛利率、ROE、營收加速度</td></tr>
+<tr><td class="tl" style="font-weight:600;color:var(--green)">H. V5 動能精選</td><td>4</td><td>—</td><td>✅</td><td class="tl">20日新高突破、動能加速度、毛利率變化、外資換手率</td></tr>
+<tr><td class="tl" style="font-weight:600;color:var(--red)">I. 集保股權分散</td><td>3</td><td>—</td><td style="color:var(--red)">❌</td><td class="tl">大戶/散戶持股比（實驗證實為小型股偏誤主因）</td></tr>
+<tr><td class="tl" style="font-weight:600;color:var(--red)">J. 高偏誤因子</td><td>3</td><td>✅</td><td style="color:var(--red)">❌</td><td class="tl">振幅、短期ATR、短期波動率（與小型股活躍度高度相關）</td></tr>
+</tbody>
+<tfoot><tr style="font-weight:700"><td class="tl">淨因子數</td><td></td><td>34</td><td class="best">41</td><td class="tl">+11 新因子、-4 偏誤因子</td></tr></tfoot>
+</table>
+</div>
+
+<!-- ═══════ 4. Walk-Forward CV ═══════ -->
+<div class="flow-section stagger">
+<h2>Walk-Forward 交叉驗證（5 Folds × 5 Seeds）</h2>
+<div class="arch-card" style="overflow-x:auto">
+<table>
+<thead><tr>
+  <th class="tl">Fold</th>
+  <th style="color:var(--green)">訓練集（5年）</th>
+  <th style="color:var(--orange)">驗證集（1年）</th>
+  <th style="color:var(--red)">測試集（1年）</th>
+</tr></thead>
+<tbody>
+<tr><td class="tl">Fold 1</td><td>2015 – 2019</td><td>2020</td><td>2021</td></tr>
+<tr><td class="tl">Fold 2</td><td>2016 – 2020</td><td>2021</td><td>2022</td></tr>
+<tr><td class="tl">Fold 3</td><td>2017 – 2021</td><td>2022</td><td>2023</td></tr>
+<tr><td class="tl">Fold 4</td><td>2018 – 2022</td><td>2023</td><td>2024</td></tr>
+<tr><td class="tl">Fold 5</td><td>2019 – 2023</td><td>2024</td><td>2025</td></tr>
+</tbody>
+</table>
+<p style="font-size:0.82rem; color:var(--muted); margin-top:0.8rem;">
+  <strong>標籤：</strong>5 日前瞻報酬，跨截面 Z-Score 標準化（截斷 ±3σ）<br>
+  <strong>早停：</strong>驗證集 IC 不再上升時停止（patience = 10 epochs）<br>
+  <strong>多 Seed：</strong>5 種隨機種子（42, 123, 456, 789, 2026）獨立訓練 → 等權 Ensemble → 降低單模型噪音
+</p>
+</div>
+</div>
+
+<!-- ═══════ 5. 版本演進（核心） ═══════ -->
+<div class="flow-section stagger">
+<h2>版本演進（10 版實驗歷程）</h2>
+<div class="timeline">
+
+  <div class="timeline-item done">
+    <h4>V2 — 基線版（34 因子）</h4>
+    <p>價量 + 動能 + 波動率 + 法人籌碼 + 營收。4-Fold Walk-Forward。穩健基準，Top5→10 衰退最小，但 Top20 顯著下降。</p>
+    <span class="metric">基線 Sharpe ~1.9</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V3 — 完整版（+集保 +基本面 = 41 因子）</h4>
+    <p>新增集保（大戶/散戶持股比、籌碼流向）和基本面 4 因子。Sharpe 微升但發現胃納量下降——集保因子造成小型股集中。</p>
+    <span class="metric" style="color:var(--orange)">胃納量 ↓ 小型股偏誤</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V2.5 — 消融實驗：去集保版（38 因子）</h4>
+    <p>確認假設：移除集保 3 因子，保留基本面。胃納量大幅改善，衰退率從 -26% 改善到 -18%。<strong>證實集保因子是小型股偏誤主因。</strong></p>
+    <span class="metric" style="color:var(--green)">胃納量 關鍵發現</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>三版 Ensemble（V2+V2.5+V3）</h4>
+    <p>不同因子集的模型互補：V2 穩 Top5→10、V2.5 穩 Top10→20、V3 控 Sharpe/MDD。Ensemble 效果顯著優於任何單版本。</p>
+    <span class="metric">Sharpe > 2.3</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V4a — 5-Fold 擴展（34 因子）</h4>
+    <p>V2 基底改為 5-Fold Walk-Forward（新增 2024-2025 測試期），驗證模型在更新市場數據上的表現。</p>
+    <span class="metric">5-Fold 驗證</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V5 — 動能因子強化（47 因子）</h4>
+    <p>以「資深動能交易高手」視角設計 13 個新因子：突破強度、動能加速度、融資變化等。單獨不強，但降低 Ensemble MDD。</p>
+    <span class="metric">5-Ens MDD 改善</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V6 — 流動性排名因子（37 因子）</h4>
+    <p>試圖從因子端解決胃納量問題：加入成交額排名、市值排名、流動性穩定度等因子。IC 低於 V2，方向錯誤。</p>
+    <span class="metric" style="color:var(--red)">IC 不佳 ❌</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V7 — Expanding Window + λ 正則化</h4>
+    <p>將 Walk-Forward 改為 Expanding Window（更長訓練集），並測試不同 λ 正則化強度。V7a(λ=0.05) 表現最佳。</p>
+    <span class="metric">Expanding Window</span>
+    <span class="metric">多λ對比</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V8 — 流動性 Loss 工程</h4>
+    <p>三路實驗：V8a（加流動性特徵）、V8b（大型股子集訓練）、V8c（Ranking Loss 懲罰小型股）。V8c 成功提升胃納量但績效腰斬。</p>
+    <span class="metric">績效 vs 胃納量矛盾</span>
+  </div>
+
+  <div class="timeline-item done">
+    <h4>V9 / V9b — 因子去偏 + 多 Seed 🏆</h4>
+    <p>核心突破：從源頭<strong>移除與小型股高度相關的因子</strong>（振幅、短期波動率等），加回 V5 的有效因子。V9b 以 41 因子 × 5 Seed Ensemble 達到全場最佳 Sharpe，同時胃納量可接受。</p>
+    <span class="metric" style="border-color:var(--orange);color:var(--orange)">Sharpe > 2.3 · 已上線</span>
+  </div>
+
+  <div class="timeline-item failed">
+    <h4>V10 — 三路對照實驗（38 因子 × 11 組）</h4>
+    <p>V10a（MSE baseline）、V10b（流動性懲罰 loss）、V10c（訓練集過濾）。11 組完整實驗，全部不如 V9b。V10b 提升胃納量但績效大降；V10c 最差。<strong>結論：不上線。</strong></p>
+    <span class="metric" style="color:var(--red)">全部劣於 V9b ❌</span>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════ 6. 核心洞察 ═══════ -->
+<div class="flow-section stagger">
+<h2>10 版實驗的核心洞察</h2>
+<div class="arch-grid">
+  <div class="arch-card">
+    <h3>Alpha 來源與限制</h3>
+    <ul>
+      <li><strong>Alpha 主要來自中小型股</strong> — 大型股信號弱，流動性過濾損失大半 alpha</li>
+      <li>集保因子（大戶/散戶持股比）是小型股偏誤主因 — V2.5 消融實驗證實</li>
+      <li>直接在 Loss function 懲罰小型股（V8c, V10b）會破壞模型學到的核心 pattern</li>
+      <li>正確做法：從因子端去偏（V9b），保留 alpha 同時改善胃納量</li>
+    </ul>
+  </div>
+  <div class="arch-card">
+    <h3>Ensemble 策略演進</h3>
+    <ul>
+      <li>早期：<strong>多版本 Ensemble</strong>（V2+V2.5+V3+V4a+V5）— 不同因子集互補</li>
+      <li>問題：版本越多管理越複雜，新版本不一定能融入舊 ensemble</li>
+      <li>最終：<strong>單架構 × 多 Seed</strong>（V9b × 5）— 更乾淨、可重現、效果更好</li>
+      <li>教訓：模型多樣性可以來自隨機性（seed），不一定要靠因子差異</li>
+    </ul>
+  </div>
+  <div class="arch-card">
+    <h3>什麼有效、什麼無效</h3>
+    <ul>
+      <li style="color:var(--green)"><strong>有效：</strong>因子去偏、基本面因子、動能衍生因子、多 Seed Ensemble</li>
+      <li style="color:var(--green)"><strong>有效：</strong>Walk-Forward / Expanding Window 避免前視偏差</li>
+      <li style="color:var(--red)"><strong>無效：</strong>流動性 Loss 懲罰、大型股子集訓練、訓練集過濾</li>
+      <li style="color:var(--red)"><strong>無效：</strong>進出場濾網（MA、停損停利）— 模型 score 已含趨勢資訊</li>
+    </ul>
+  </div>
+  <div class="arch-card">
+    <h3>已知風險與限制</h3>
+    <ul>
+      <li>中小型股流動性風險：回測 vs 實際交易有滑價差異</li>
+      <li>Walk-Forward 各折訓練集有重疊（structural overlap）</li>
+      <li>2025 下半年市場回撤影響所有版本 MDD</li>
+      <li>模型對市場 regime 變化的適應性有待長期驗證</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ 7. 專案階段 ═══════ -->
+<div class="flow-section stagger">
+<h2>專案階段</h2>
+<div class="phase-box">
+  <div class="phase-row">
+    <div class="phase-num"></div>
+    <div class="phase-info">
+      <h4>因子研究 & 模型訓練</h4>
+      <p>V2→V10 共 10 版因子設計 × 多種訓練策略。超過 50 組獨立實驗。</p>
+    </div>
+    <span class="phase-status status-done">完成</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-num"></div>
+    <div class="phase-info">
+      <h4>回測驗證 & 策略選擇</h4>
+      <p>Walk-Forward / Expanding Window 回測，胃納量分析，V9b-Ens5 確認為最佳。</p>
+    </div>
+    <span class="phase-status status-done">完成</span>
+  </div>
+  <div class="phase-row" style="border-color:var(--orange)">
+    <div class="phase-num"></div>
+    <div class="phase-info">
+      <h4>自動化下單 & 實盤驗證</h4>
+      <p>策略接入自動下單系統，每週產出選股信號並預掛單。初始資金已部署。</p>
+    </div>
+    <span class="phase-status status-active">進行中</span>
+  </div>
+  <div class="phase-row">
+    <div class="phase-num"></div>
+    <div class="phase-info">
+      <h4>策略優化（止損、市場 Regime）</h4>
+      <p>探索市場回撤保護機制。初步實驗顯示模型 score 本身就是最好的信號，外部濾網多半有害。</p>
+    </div>
+    <span class="phase-status status-plan">待啟動</span>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ 8. 模型細節 ═══════ -->
+<div class="flow-section stagger">
+<h2>模型與訓練細節</h2>
+<div class="arch-grid">
+  <div class="arch-card">
+    <h3>Transformer 架構</h3>
+    <ul>
+      <li>參數量：~206K / 模型（輕量級設計）</li>
+      <li>輸入：單一股票的因子時序向量</li>
+      <li>輸出：排序分數（scalar），用於跨截面排名選股</li>
+      <li>訓練速度：~100 秒/epoch（GPU, 16GB VRAM）</li>
+      <li>早停策略：驗證集 IC 無提升時停止（patience=10）</li>
+      <li>Loss：MSE（V10 實驗過自訂 Loss，確認 MSE 最佳）</li>
+    </ul>
+  </div>
+  <div class="arch-card">
+    <h3>回測方法論</h3>
+    <ul>
+      <li>Walk-Forward / Expanding Window 5-Fold CV</li>
+      <li>測試集完全未參與調參（out-of-sample）</li>
+      <li>手續費以折扣計算（含證交稅）</li>
+      <li>週頻調倉（每週五收盤），等權重</li>
+      <li>胃納量以 FinLab 流動性 capacity 衡量</li>
+      <li>多 Top-N（5 / 10 / 20）交叉驗證信號衰退</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ 9. 基礎設施 ═══════ -->
+<div class="flow-section stagger">
+<h2>基礎設施</h2>
+<div class="infra-grid">
+  <div class="infra-card">
+    <h4>Mac Mini（Apple Silicon）</h4>
+    <p>因子建構、回測引擎、報告產出、資料 API 快取。24/7 運行。</p>
+  </div>
+  <div class="infra-card">
+    <h4>Windows GPU 主機</h4>
+    <p>CUDA GPU 訓練。每 epoch ~100 秒。支援多 Seed 平行訓練。</p>
+  </div>
+  <div class="infra-card">
+    <h4>VPN 安全網路</h4>
+    <p>Mac ↔ Windows 點對點加密，用於數據傳輸與遠端訓練管理。</p>
+  </div>
+  <div class="infra-card">
+    <h4>AI Agent 全自動調度</h4>
+    <p>管理完整 pipeline：自動建因子 → 監控訓練 → 拉取結果 → 跑回測 → 產報告 → 觸發下單。全程無需人工介入。</p>
+  </div>
+  <div class="infra-card">
+    <h4>自動下單系統</h4>
+    <p>每週自動執行策略選股 → 產出買賣清單 → 預掛單。已接入券商 API。</p>
+  </div>
+  <div class="infra-card">
+    <h4>知識管理（Obsidian）</h4>
+    <p>所有實驗筆記、因子設計、回測報告、決策紀錄統一歸檔到 Obsidian vault，確保可追溯性。</p>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ 10. 實驗統計 ═══════ -->
+<div class="flow-section stagger">
+<h2>實驗規模統計</h2>
+<div style="display:flex; flex-wrap:wrap; gap:1rem; justify-content:center; margin-top:1rem;">
+  <div style="background:var(--card); border-radius:10px; padding:1.2rem 1.5rem; border:1px solid var(--border); text-align:center; min-width:120px;">
+    <div style="font-size:2rem; font-weight:700; color:var(--accent);">10</div>
+    <div style="font-size:0.8rem; color:var(--muted);">模型版本</div>
+  </div>
+  <div style="background:var(--card); border-radius:10px; padding:1.2rem 1.5rem; border:1px solid var(--border); text-align:center; min-width:120px;">
+    <div style="font-size:2rem; font-weight:700; color:var(--green);">50+</div>
+    <div style="font-size:0.8rem; color:var(--muted);">獨立實驗</div>
+  </div>
+  <div style="background:var(--card); border-radius:10px; padding:1.2rem 1.5rem; border:1px solid var(--border); text-align:center; min-width:120px;">
+    <div style="font-size:2rem; font-weight:700; color:var(--orange);">41</div>
+    <div style="font-size:0.8rem; color:var(--muted);">最終因子數</div>
+  </div>
+  <div style="background:var(--card); border-radius:10px; padding:1.2rem 1.5rem; border:1px solid var(--border); text-align:center; min-width:120px;">
+    <div style="font-size:2rem; font-weight:700; color:var(--purple);">5</div>
+    <div style="font-size:0.8rem; color:var(--muted);">Ensemble Seeds</div>
+  </div>
+  <div style="background:var(--card); border-radius:10px; padding:1.2rem 1.5rem; border:1px solid var(--border); text-align:center; min-width:120px;">
+    <div style="font-size:2rem; font-weight:700; color:var(--cyan);">~3 週</div>
+    <div style="font-size:0.8rem; color:var(--muted);">研究週期</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ 11. FinLab 回測報告瀏覽器 ═══════ -->
+<div class="flow-section stagger">
+<h2>FinLab 回測報告瀏覽器（558 份）</h2>
+<p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;">所有歷代回測報告，按版本分類。點擊展開各分類，點擊報告名稱直接開啟 FinLab 互動式回測頁面。</p>
+<div>
+    <details class="report-group" open>
+      <summary><span style="color:var(--green)">V9b 系列（當前最佳 — 上線版本）</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(89 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">v9b ens5 baseline top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 baseline top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 baseline top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 combined top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 combined top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 combined top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 cond rebal top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 cond rebal top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 cond rebal top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 ivol top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 ivol top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 ivol top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector cap top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector cap top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector cap top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector ivol top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector ivol top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 sector ivol top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 top20</a>
+        <a href="#" onclick="return false" target="_blank" style="color:var(--green);border-color:var(--green);font-weight:600">v9b ens5 top5 — 上線版本</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn10</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn11</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn12</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn13</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn14</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn15</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn16</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn17</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn18</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn19</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn20</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn21</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn22</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn23</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn24</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn25</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn3</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn4</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn5</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn6</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn7</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn8</a>
+        <a href="#" onclick="return false" target="_blank">v9b ens5 topn9</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a50 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a50 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a50 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a50 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a50 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a60 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a60 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a60 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a60 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a60 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a70 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a70 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a70 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a70 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a70 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a80 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a80 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a80 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a80 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a80 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a90 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a90 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a90 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a90 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a90 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a95 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a95 top12</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a95 top15</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a95 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b hybrid a95 top8</a>
+        <a href="#" onclick="return false" target="_blank">v9b s123 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b s123 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b s123 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b s2026 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b s2026 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b s2026 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b s42 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b s42 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b s42 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b s456 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b s456 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b s456 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9b s789 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9b s789 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9b s789 top5</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--accent)">V9 系列</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(20 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">v9 5seed ens top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 5seed ens top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 ens5 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 ens5 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 ens5 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9 s123 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 s123 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 s123 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9 s2026 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 s2026 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 s2026 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9 s42 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 s42 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 s42 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9 s456 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 s456 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 s456 top5</a>
+        <a href="#" onclick="return false" target="_blank">v9 s789 top10</a>
+        <a href="#" onclick="return false" target="_blank">v9 s789 top20</a>
+        <a href="#" onclick="return false" target="_blank">v9 s789 top5</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--red)">V10 系列（實驗完成，不上線）</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(48 份)</span> <span class="metric" style="color:var(--red);border-color:var(--red);font-size:0.72rem">MDD -35%~-55%，不採用</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">transformer v10a s123 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s123 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s123 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s42 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s42 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s42 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s456 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s456 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10a s456 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.03 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.03 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.03 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.05 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.05 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s123 lam0.05 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.03 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.03 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.03 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.05 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.05 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10b s42 lam0.05 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.3 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.3 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.3 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.5 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.5 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s123 ar0.5 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.3 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.3 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.3 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.5 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.5 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v10c s42 ar0.5 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10a top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10a top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10a top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.03 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.03 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.03 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.05 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.05 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10b lam0.05 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.3 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.3 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.3 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.5 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.5 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">v10 ens v10c ar0.5 top5 backtest</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--accent)">早期版本（V2 / V2.5 / V3）</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(28 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 liq top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 liq top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 liq top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 5 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 liq top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 liq top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 liq top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 ensemble top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 ensemble top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 ensemble top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 v3 ensemble top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 v3 ensemble top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2 v2 5 v3 ensemble top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2v3 ensemble top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2v3 ensemble top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v2v3 ensemble top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 liq top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 liq top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 liq top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">transformer v3 top5 backtest</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--purple)">Ensemble 系列（多模型組合）</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(79 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">5ens 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">6ens 4fold top10</a>
+        <a href="#" onclick="return false" target="_blank">6ens 4fold top20</a>
+        <a href="#" onclick="return false" target="_blank">6ens 4fold top5</a>
+        <a href="#" onclick="return false" target="_blank">6ens 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">6ens 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">6ens 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">6ens top10</a>
+        <a href="#" onclick="return false" target="_blank">6ens top10 v8cmp</a>
+        <a href="#" onclick="return false" target="_blank">6ens top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a001 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a005 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a005 top10 v8cmp</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a005 top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a01 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.01 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.01 top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.05 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.05 top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.1 top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7a lam0.1 top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7b top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v7b top20</a>
+        <a href="#" onclick="return false" target="_blank">7ens v8a top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v8b top10</a>
+        <a href="#" onclick="return false" target="_blank">7ens v8c top10</a>
+        <a href="#" onclick="return false" target="_blank">8ens top10</a>
+        <a href="#" onclick="return false" target="_blank">8ens top20</a>
+        <a href="#" onclick="return false" target="_blank">8ens v8ab top10</a>
+        <a href="#" onclick="return false" target="_blank">8ens v8ac top10</a>
+        <a href="#" onclick="return false" target="_blank">9ens v8abc top10</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V4a 4-fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V4a 4-fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V4a 4-fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V5 4-fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V5 4-fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ens 4-EnsV2 V25 V3 V5 4-fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 4-fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 4-fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 4-fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 5-fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 5-fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ens 5-EnsV2 V25 V3 V4a V5 5-fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4a ref top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4a ref top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4a ref top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4c top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4c top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4c top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4d top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4d top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4d top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 4fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 4fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 4fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4b top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4b top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4b top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4d top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4d top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 4model v4d top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5c top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5c top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5c top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5model top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5model top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 5model top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model 4fold top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model 4fold top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model 4fold top5</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model top10</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model top20</a>
+        <a href="#" onclick="return false" target="_blank">ensemble 6model top5</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--accent)">流動性過濾（Cap / 市值篩選）</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(25 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">cap 4-EnsV2 V25 V3 V4a 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 4-Ens Top10 市值前300</a>
+        <a href="#" onclick="return false" target="_blank">cap 4-Ens Top10 市值前500</a>
+        <a href="#" onclick="return false" target="_blank">cap 4-Ens Top10 流動性gt1億</a>
+        <a href="#" onclick="return false" target="_blank">cap 4-Ens Top10 流動性gt3億</a>
+        <a href="#" onclick="return false" target="_blank">cap 4-Ens Top10 流動性gt5000萬</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-EnsV2 V25 V3 V4a V5 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-Ens Top10 市值前300</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-Ens Top10 市值前500</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-Ens Top10 流動性gt1億</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-Ens Top10 流動性gt3億</a>
+        <a href="#" onclick="return false" target="_blank">cap 5-Ens Top10 流動性gt5000萬</a>
+        <a href="#" onclick="return false" target="_blank">cap 5Ens top10 liq5000w</a>
+        <a href="#" onclick="return false" target="_blank">cap 5Ens top15 liq5000w</a>
+        <a href="#" onclick="return false" target="_blank">cap 5Ens top20 liq5000w</a>
+        <a href="#" onclick="return false" target="_blank">cap 5ens liq50m top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 6ens 4fold liq50m top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 6ens 5fold liq50m top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 6ens liq50m top10</a>
+        <a href="#" onclick="return false" target="_blank">cap 7ens v7b liq50m top10</a>
+        <a href="#" onclick="return false" target="_blank">cap V25 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap V2 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap V3 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap V4a 4-fold Top10</a>
+        <a href="#" onclick="return false" target="_blank">cap V5 4-fold Top10</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--accent)">Phase 2 — Meta 學習</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(116 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">phase2 debug lgb only top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2 debug lgb only top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2 debug lgb xgb avg top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2 debug lgb xgb avg top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2 debug xgb only top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2 debug xgb only top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2 fixed lgb top10 filtered</a>
+        <a href="#" onclick="return false" target="_blank">phase2 fixed lgb top10 no filter</a>
+        <a href="#" onclick="return false" target="_blank">phase2 fixed lgb top5 filtered</a>
+        <a href="#" onclick="return false" target="_blank">phase2 fixed lgb top5 no filter</a>
+        <a href="#" onclick="return false" target="_blank">phase2 stacked top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2 stacked top15</a>
+        <a href="#" onclick="return false" target="_blank">phase2 stacked top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2 stacked top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 all avg top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 lgb xgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked all avg top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked lgb xgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked meta top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked transformer top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 stacked xgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 all avg top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 lgb xgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta ridge top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 meta xgb oof top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 transformer top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 v2 xgb top70</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top20</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top30</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top50</a>
+        <a href="#" onclick="return false" target="_blank">phase2v2 xgb top70</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--accent)">Phase 3 — Meta 進階 & 單模型</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(42 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">Meta LGB Only</a>
+        <a href="#" onclick="return false" target="_blank">Meta Stacked Final</a>
+        <a href="#" onclick="return false" target="_blank">Meta Transformer Only</a>
+        <a href="#" onclick="return false" target="_blank">Meta XGB Only</a>
+        <a href="#" onclick="return false" target="_blank">meta lgb top10</a>
+        <a href="#" onclick="return false" target="_blank">meta lgb top20</a>
+        <a href="#" onclick="return false" target="_blank">meta ridge top10</a>
+        <a href="#" onclick="return false" target="_blank">meta ridge top20</a>
+        <a href="#" onclick="return false" target="_blank">meta weighted top10</a>
+        <a href="#" onclick="return false" target="_blank">meta weighted top20</a>
+        <a href="#" onclick="return false" target="_blank">phase3 best config lgb top5 W vol300k ma60</a>
+        <a href="#" onclick="return false" target="_blank">phase3 lgb top5 W vol100k ma60</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta best3 avg top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta best3 avg top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta best3 avg top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta equal avg top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta equal avg top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta equal avg top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta lgb meta top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta lgb meta top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta lgb meta top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta ridge stack top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta ridge stack top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta ridge stack top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta transformer only top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta transformer only top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta transformer only top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta tree only top10 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta tree only top20 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 meta tree only top5 backtest</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT lgb only filtered top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT lgb only filtered top5</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT lgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT lgb top5</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT new meta ridge top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT new meta ridge top5</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT new stack avg top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT new stack avg top5</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT transformer top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT transformer top5</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT xgb top10</a>
+        <a href="#" onclick="return false" target="_blank">phase3 newT xgb top5</a>
+      </div>
+    </details>
+    <details class="report-group">
+      <summary><span style="color:var(--muted)">其他報告</span> <span style="color:var(--muted);font-size:0.8rem;font-weight:400">(111 份)</span></summary>
+      <div class="report-grid">
+        <a href="#" onclick="return false" target="_blank">G6 latest</a>
+        <a href="#" onclick="return false" target="_blank">index</a>
+        <a href="#" onclick="return false" target="_blank">phase4 native report</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 MA20 timing</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 MA40 timing</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 MA60 timing</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 baseline</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 combined 12pct MA40</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 trailing 10pct</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 trailing 12pct</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 trailing 15pct</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 trailing 20pct</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 trailing 8pct</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 triple 12pct MA40 vol</a>
+        <a href="#" onclick="return false" target="_blank">phase4 xgb top5 volatility adj</a>
+        <a href="#" onclick="return false" target="_blank">plan a1 filt5k top10</a>
+        <a href="#" onclick="return false" target="_blank">plan a2 filt1y top10</a>
+        <a href="#" onclick="return false" target="_blank">plan a3 filt5k top15</a>
+        <a href="#" onclick="return false" target="_blank">plan b1 top30pick10</a>
+        <a href="#" onclick="return false" target="_blank">plan b2 top50pick10</a>
+        <a href="#" onclick="return false" target="_blank">plan b3 top30pick15</a>
+        <a href="#" onclick="return false" target="_blank">plan c1 liqw top15</a>
+        <a href="#" onclick="return false" target="_blank">plan c2 liqw top20</a>
+        <a href="#" onclick="return false" target="_blank">plan d1 scoreliq top15</a>
+        <a href="#" onclick="return false" target="_blank">plan d2 scoreliq top10</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b15</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b25</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b35</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b45</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b45 mild</a>
+        <a href="#" onclick="return false" target="_blank">regime15 b45 strong</a>
+        <a href="#" onclick="return false" target="_blank">regime15 baseline</a>
+        <a href="#" onclick="return false" target="_blank">regime15 c15</a>
+        <a href="#" onclick="return false" target="_blank">regime15 c15 mild</a>
+        <a href="#" onclick="return false" target="_blank">regime a1</a>
+        <a href="#" onclick="return false" target="_blank">regime a2</a>
+        <a href="#" onclick="return false" target="_blank">regime a3</a>
+        <a href="#" onclick="return false" target="_blank">regime a4</a>
+        <a href="#" onclick="return false" target="_blank">regime a5</a>
+        <a href="#" onclick="return false" target="_blank">regime a6</a>
+        <a href="#" onclick="return false" target="_blank">regime b1</a>
+        <a href="#" onclick="return false" target="_blank">regime b2</a>
+        <a href="#" onclick="return false" target="_blank">regime b3</a>
+        <a href="#" onclick="return false" target="_blank">regime b4</a>
+        <a href="#" onclick="return false" target="_blank">regime baseline</a>
+        <a href="#" onclick="return false" target="_blank">regime c1</a>
+        <a href="#" onclick="return false" target="_blank">regime c2</a>
+        <a href="#" onclick="return false" target="_blank">regime c3</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 B Market MA120 HalfPos</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 B Market MA20 HalfPos</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 Baseline Top10</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 D LowVol20d</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 G HoldUntilRankOut20</a>
+        <a href="#" onclick="return false" target="_blank">sweep2 J ConsecDown3d Half</a>
+        <a href="#" onclick="return false" target="_blank">sweep 01 baseline</a>
+        <a href="#" onclick="return false" target="_blank">sweep 02 ma60</a>
+        <a href="#" onclick="return false" target="_blank">sweep 03 sl8</a>
+        <a href="#" onclick="return false" target="_blank">sweep 04 ma60 sl8</a>
+        <a href="#" onclick="return false" target="_blank">sweep 05 ma60 sl5 tp20</a>
+        <a href="#" onclick="return false" target="_blank">sweep 06 ma60 sl10 tp25</a>
+        <a href="#" onclick="return false" target="_blank">sweep 07 best combo</a>
+        <a href="#" onclick="return false" target="_blank">v2 5 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v2 5 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v2 5 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v2 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v2 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v2 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v3 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v3 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v3 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v4a 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v4a 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v4a 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v4a top10</a>
+        <a href="#" onclick="return false" target="_blank">v4a top20</a>
+        <a href="#" onclick="return false" target="_blank">v4a top5</a>
+        <a href="#" onclick="return false" target="_blank">v4b top10</a>
+        <a href="#" onclick="return false" target="_blank">v4b top20</a>
+        <a href="#" onclick="return false" target="_blank">v4b top5</a>
+        <a href="#" onclick="return false" target="_blank">v4c top10</a>
+        <a href="#" onclick="return false" target="_blank">v4c top20</a>
+        <a href="#" onclick="return false" target="_blank">v4c top5</a>
+        <a href="#" onclick="return false" target="_blank">v4d top10</a>
+        <a href="#" onclick="return false" target="_blank">v4d top20</a>
+        <a href="#" onclick="return false" target="_blank">v4d top5</a>
+        <a href="#" onclick="return false" target="_blank">v5 4fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v5 4fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v5 4fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v5 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v5 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v5 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v6 4fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v6 4fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v6 4fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v6 5fold top10</a>
+        <a href="#" onclick="return false" target="_blank">v6 5fold top20</a>
+        <a href="#" onclick="return false" target="_blank">v6 5fold top5</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.01 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.01 top20</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.05 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.05 top20</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.1 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam0.1 top20</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam001 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam005 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7a lam01 top10</a>
+        <a href="#" onclick="return false" target="_blank">v7b top10</a>
+        <a href="#" onclick="return false" target="_blank">v7b top20</a>
+        <a href="#" onclick="return false" target="_blank">v8a solo top10</a>
+        <a href="#" onclick="return false" target="_blank">v8b solo top10</a>
+        <a href="#" onclick="return false" target="_blank">v8c solo top10</a>
+      </div>
+    </details>
+</div>
+</div>
+
+<div class="footer">
+  交易聖經 · Last updated: 2026-02-26 01:50 · <a href="index.html" style="color:var(--accent)">返回專案總覽</a>
+</div>
+
+<script>lucide.createIcons();document.querySelectorAll('.stagger').forEach((el,i)=>el.style.animationDelay=`${i*70}ms`);</script>
+</body>
+</html>
