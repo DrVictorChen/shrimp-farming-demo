@@ -12,6 +12,7 @@ body { font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-seri
 h1 { font-size: 2em; color: var(--accent); margin-bottom: 8px; border-bottom: 2px solid var(--accent); padding-bottom: 12px; }
 h2 { font-size: 1.5em; color: var(--accent); margin-top: 48px; margin-bottom: 16px; border-left: 4px solid var(--accent); padding-left: 12px; }
 h3 { font-size: 1.2em; color: #94a3b8; margin-top: 32px; margin-bottom: 12px; }
+h4 { font-size: 1.05em; color: #cbd5e1; margin-top: 24px; margin-bottom: 8px; }
 p { margin-bottom: 16px; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -27,6 +28,7 @@ li { margin-bottom: 6px; }
 blockquote { border-left: 4px solid var(--accent); padding: 12px 16px; margin: 16px 0; background: var(--card); border-radius: 0 8px 8px 0; }
 hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
 strong { color: #f8fafc; }
+img { max-width: 100%; height: auto; border-radius: 8px; margin: 16px 0; border: 1px solid var(--border); }
 .header { text-align: center; padding: 40px 0 20px; }
 .header p { color: #94a3b8; font-size: 0.95em; }
 </style>
@@ -273,19 +275,17 @@ strong { color: #f8fafc; }
 
 **macOS / Linux：**
 
-<pre class="codehilite"><code class="language-bash">mv ~/Downloads/openclaw-key.pem ~/.ssh/
+<pre><code class="language-bash">mv ~/Downloads/openclaw-key.pem ~/.ssh/
 chmod 400 ~/.ssh/openclaw-key.pem
 </code></pre>
 
 
-
 **Windows（PowerShell）：**
 
-<pre class="codehilite"><code class="language-powershell">mkdir ~\.ssh -Force
+<pre><code class="language-powershell">mkdir ~\.ssh -Force
 mv ~\Downloads\openclaw-key.pem ~\.ssh\
 icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME):(R)&quot;
 </code></pre>
-
 
 </details>
 
@@ -338,17 +338,15 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 <strong>幾秒後，瀏覽器會開一個新視窗（或分頁），裡面就是你 EC2 的 Terminal！</strong></p>
 </blockquote>
 <p>你會看到畫面出現一個 <code>$</code> 符號（命令提示字元）：</p>
-<pre class="codehilite"><code>$
+<pre><code>$
 </code></pre>
-
 <p>這就代表你已經連上了。看起來很陽春，但這就是 Linux 的命令列介面 — 在 <code>$</code> 後面打指令按 Enter 就會執行。</p>
 <blockquote>
 <p>💡 Instance Connect 開的是精簡版 shell，所以不會像教學影片那樣顯示 <code>ubuntu@ip-xxx:~$</code> 的完整提示。只有一個 <code>$</code> 是<strong>正常的</strong>。</p>
 </blockquote>
 <p>先確認你目前的身份：</p>
-<pre class="codehilite"><code class="language-bash">whoami
+<pre><code class="language-bash">whoami
 </code></pre>
-
 <p>→ 應該會顯示 <code>ssm-user</code>。<strong>記住這個身份，後面設定 systemd 時要用到。</strong></p>
 <p>→ 恭喜！你已經「走進」EC2 了。現在你在這裡打的每一行指令，都是在那台遠端電腦上執行。</p>
 <p>白話：就像 Google Docs 不用裝 Word 就能在瀏覽器裡編輯文件一樣，Instance Connect 讓你不用裝任何東西就能操作遠端電腦。</p>
@@ -377,23 +375,19 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 </table>
 <h4 id="step-2">Step 2：更新系統 &amp; 設定時區</h4>
 <p>連上後，在瀏覽器的 Terminal 裡依序輸入：</p>
-<pre class="codehilite"><code class="language-bash">sudo apt update
+<pre><code class="language-bash">sudo apt update
 </code></pre>
-
 <p>→ 更新套件清單。你會看到一堆 <code>Hit</code> / <code>Get</code> 的輸出，正常。</p>
-<pre class="codehilite"><code class="language-bash">sudo apt -y upgrade
+<pre><code class="language-bash">sudo apt -y upgrade
 </code></pre>
-
 <p>→ 把所有已安裝的軟體更新到最新版。
 → 這步可能要跑 1-3 分鐘，耐心等。如果中間跳出紫色畫面問你要不要重啟服務，直接按 <strong>Enter</strong>（選預設值）就好。</p>
-<pre class="codehilite"><code class="language-bash">sudo timedatectl set-timezone Asia/Taipei
+<pre><code class="language-bash">sudo timedatectl set-timezone Asia/Taipei
 </code></pre>
-
 <p>→ 把時區設成台北。不設的話預設 UTC（比台灣慢 8 小時），之後看日誌會很混亂。</p>
 <p>驗證時區是否設對：</p>
-<pre class="codehilite"><code class="language-bash">date
+<pre><code class="language-bash">date
 </code></pre>
-
 <p>→ 應該顯示台北時間，例如 <code>Sun Feb 23 10:30:00 CST 2026</code></p>
 <hr />
 <details>
@@ -403,16 +397,14 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 
 **macOS / Linux（Terminal）：**
 
-<pre class="codehilite"><code class="language-bash">ssh -i ~/.ssh/openclaw-key.pem ubuntu@&lt;EC2_PUBLIC_IP&gt;
+<pre><code class="language-bash">ssh -i ~/.ssh/openclaw-key.pem ubuntu@&lt;EC2_PUBLIC_IP&gt;
 </code></pre>
-
 
 
 **Windows（PowerShell）：**
 
-<pre class="codehilite"><code class="language-powershell">ssh -i $HOME\.ssh\openclaw-key.pem ubuntu@&lt;EC2_PUBLIC_IP&gt;
+<pre><code class="language-powershell">ssh -i $HOME\.ssh\openclaw-key.pem ubuntu@&lt;EC2_PUBLIC_IP&gt;
 </code></pre>
-
 
 
 把 `<EC2_PUBLIC_IP>` 換成你的 EC2 公有 IP 地址（在執行個體詳細資訊裡找）。
@@ -435,14 +427,12 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 <p>確認你現在是在 EC2 裡面（瀏覽器 Terminal 有 <code>$</code> 提示字元），以下所有指令都在 EC2 上執行。</p>
 </blockquote>
 <h4 id="_4">一行指令搞定：</h4>
-<pre class="codehilite"><code class="language-bash">curl -fsSL https://openclaw.ai/install.sh | bash
+<pre><code class="language-bash">curl -fsSL https://openclaw.ai/install.sh | bash
 </code></pre>
-
 <p>就這一行。它會自動安裝 Node.js、npm、OpenClaw。</p>
 <p>跑完後驗證：</p>
-<pre class="codehilite"><code class="language-bash">openclaw --version
+<pre><code class="language-bash">openclaw --version
 </code></pre>
-
 <p>→ 看到版本號就是成功了！</p>
 <blockquote>
 <p>⚠️ 安裝過程中看到 <code>CC(target)</code>、<code>note:</code>、<code>WARN</code> 等輸出都是<strong>正常的</strong>（在編譯原生模組），耐心等 5-15 分鐘。
@@ -454,18 +444,16 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 <p>這步是把「AI 模型的密碼」和「通訊平台的密碼」寫進一個設定檔，讓 OpenClaw 知道該連哪個 AI、該跟誰對話。</p>
 </blockquote>
 <h4 id="step-1">Step 1：建立設定資料夾</h4>
-<pre class="codehilite"><code class="language-bash">mkdir -p ~/.openclaw
+<pre><code class="language-bash">mkdir -p ~/.openclaw
 </code></pre>
-
 <p>→ 建立一個叫 <code>.openclaw</code> 的資料夾。前面的 <code>.</code> 表示隱藏資料夾（Linux 慣例，放設定用）。
 → <code>-p</code> 表示「如果已經存在就跳過，不要報錯」。</p>
 <h4 id="step-2-nano-env">Step 2：用 nano 編輯器建立 .env 檔</h4>
-<pre class="codehilite"><code class="language-bash">nano ~/.openclaw/.env
+<pre><code class="language-bash">nano ~/.openclaw/.env
 </code></pre>
-
 <p>你會看到畫面變成一個<strong>空白的文字編輯器</strong>，底部有一排快捷鍵提示（<code>^G Get Help</code> <code>^O Write Out</code> 等等）。</p>
 <blockquote>
-<p>📸 <em>建議截圖：nano 編輯器的空白畫面，注意底部的快捷鍵列</em><img alt="" src="assets/Pasted%20image%2020260222231211.png" />
+<p>📸 <em>建議截圖：nano 編輯器的空白畫面，注意底部的快捷鍵列</em><img alt="" src="assets/img_1.png" />
 <strong>nano 超簡單操作指南：</strong>
 - 直接打字就能輸入內容（跟記事本一樣）
 - 方向鍵移動游標
@@ -476,17 +464,15 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 <h4 id="step-3">Step 3：填入設定內容</h4>
 <p>在 nano 裡面輸入以下內容（先跟著打，Token 怎麼拿後面會教）：</p>
 <p><strong>Telegram 版（推薦，最簡單）：</strong></p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=你的Bot密碼放這裡
+<pre><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=你的Bot密碼放這裡
 OPENCLAW_ALLOWED_CHAT_ID=你的ChatID放這裡
 TZ=Asia/Taipei
 </code></pre>
-
 <p><strong>Discord 版：</strong></p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_DISCORD_BOT_TOKEN=你的Bot密碼放這裡
+<pre><code class="language-env">OPENCLAW_DISCORD_BOT_TOKEN=你的Bot密碼放這裡
 OPENCLAW_DISCORD_CHANNEL_IDS=頻道ID放這裡
 TZ=Asia/Taipei
 </code></pre>
-
 <p><strong>每個欄位是什麼意思：</strong></p>
 <table>
 <thead>
@@ -572,20 +558,17 @@ TZ=Asia/Taipei
 <p>白話：就像手機預付卡，先儲 $5，用完自動停。等你熟悉消耗速度後再加。</p>
 <h4 id="step-4-api-key-ec2">Step 4：把 API Key 寫進 EC2 設定</h4>
 <p>回到 EC2 的 Terminal（如果斷了就重新 SSH 連上），編輯 <code>.env</code> 檔：</p>
-<pre class="codehilite"><code class="language-bash">nano ~/.openclaw/.env
+<pre><code class="language-bash">nano ~/.openclaw/.env
 </code></pre>
-
 <p>在已有的內容下面加上一行：</p>
-<pre class="codehilite"><code class="language-env">OPENROUTER_API_KEY=sk-or-v1-你剛才複製的那串Key
+<pre><code class="language-env">OPENROUTER_API_KEY=sk-or-v1-你剛才複製的那串Key
 </code></pre>
-
 <p>整個 <code>.env</code> 現在看起來應該像：</p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=123456:ABC-xxx
+<pre><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=123456:ABC-xxx
 OPENCLAW_ALLOWED_CHAT_ID=1163817854
 TZ=Asia/Taipei
 OPENROUTER_API_KEY=sk-or-v1-abcdef123456...
 </code></pre>
-
 <p>按 <code>Ctrl + O</code> → <code>Enter</code> → <code>Ctrl + X</code> 儲存離開。</p>
 <h4 id="_6">模型怎麼選？</h4>
 <p>後面啟動 Dashboard（3.6 節）後可以在介面上選。常見選擇：
@@ -599,25 +582,21 @@ OPENROUTER_API_KEY=sk-or-v1-abcdef123456...
 <p>OpenClaw 裝好了，接下來要啟動「Gateway」— 它是 OpenClaw 的核心服務，負責連接 AI 模型和通訊平台。</p>
 </blockquote>
 <h4 id="step-1_1">Step 1：先手動測試</h4>
-<pre class="codehilite"><code class="language-bash">openclaw gateway run
+<pre><code class="language-bash">openclaw gateway run
 </code></pre>
-
 <p>成功的話你會看到：</p>
-<pre class="codehilite"><code>[gateway] listening on ws://127.0.0.1:18789
+<pre><code>[gateway] listening on ws://127.0.0.1:18789
 </code></pre>
-
 <p>→ Gateway 在跑了！確認沒問題後，按 <code>Ctrl + C</code> 停掉。接下來設定自動守護，讓它開機自動跑、掛掉自動重啟。</p>
 <h4 id="step-2-systemd-service">Step 2：建立 systemd service</h4>
 <p>先找到 openclaw 的實際路徑：</p>
-<pre class="codehilite"><code class="language-bash">which openclaw
+<pre><code class="language-bash">which openclaw
 </code></pre>
-
 <p>→ 記下顯示的路徑（例如 <code>/usr/local/bin/openclaw</code> 或 <code>/usr/bin/openclaw</code>），等下要用。</p>
-<pre class="codehilite"><code class="language-bash">sudo nano /etc/systemd/system/openclaw.service
+<pre><code class="language-bash">sudo nano /etc/systemd/system/openclaw.service
 </code></pre>
-
 <p>貼上以下內容（<strong>把 <code>User=</code> 和路徑換成你的實際情況</strong>）：</p>
-<pre class="codehilite"><code class="language-ini">[Unit]
+<pre><code class="language-ini">[Unit]
 Description=OpenClaw Gateway
 After=network.target
 
@@ -631,7 +610,6 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 </code></pre>
-
 <p>按 <code>Ctrl + O</code> → <code>Enter</code>（儲存） → <code>Ctrl + X</code>（離開）。</p>
 <blockquote>
 <p>🔴 <strong>最容易踩的坑：User 和 HOME 必須對齊！</strong></p>
@@ -698,24 +676,20 @@ WantedBy=multi-user.target
 <p>白話：你雇了一位「24 小時值班警衛」，OpenClaw 倒了就扶起來，開機就自動上崗。</p>
 <h4 id="step-2_1">Step 2：啟動服務</h4>
 <p>依序執行這三行：</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl daemon-reload
+<pre><code class="language-bash">sudo systemctl daemon-reload
 </code></pre>
-
 <p>→ 告訴系統「我新增了一個 service 設定檔，請重新讀取」。沒有輸出是正常的。</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl enable --now openclaw
+<pre><code class="language-bash">sudo systemctl enable --now openclaw
 </code></pre>
-
 <p>→ <code>enable</code> = 設定開機自動啟動，<code>--now</code> = 現在就立刻啟動。兩件事一行搞定。</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl status openclaw
+<pre><code class="language-bash">sudo systemctl status openclaw
 </code></pre>
-
 <p>→ 查看 OpenClaw 目前狀態。</p>
 <p><strong>成功的話你會看到：</strong></p>
-<pre class="codehilite"><code>● openclaw.service - OpenClaw Gateway
+<pre><code>● openclaw.service - OpenClaw Gateway
      Loaded: loaded (/etc/systemd/system/openclaw.service; enabled)
      Active: active (running) since Sun 2026-02-23 10:30:00 CST
 </code></pre>
-
 <p>重點看兩個地方：
 - <code>enabled</code> = 開機會自動啟動 ✓
 - <code>active (running)</code> = 現在正在跑 ✓</p>
@@ -723,7 +697,7 @@ WantedBy=multi-user.target
 - <code>.env</code> 裡 Token 沒填或格式錯 → 回 3.4 檢查
 - <code>ExecStart</code> 路徑不對 → 執行 <code>which openclaw</code> 確認路徑</p>
 <blockquote>
-<p>📸 <em>建議截圖：<code>systemctl status openclaw</code> 顯示 active (running) 的成功畫面</em><img alt="" src="assets/Pasted%20image%2020260222234211.png" /></p>
+<p>📸 <em>建議截圖：<code>systemctl status openclaw</code> 顯示 active (running) 的成功畫面</em><img alt="" src="assets/img_2.png" /></p>
 </blockquote>
 <h4 id="_9">常用管理指令（之後會用到）</h4>
 <table>
@@ -767,14 +741,12 @@ WantedBy=multi-user.target
 </blockquote>
 <h4 id="step-1-ec2-dashboard">Step 1：在 EC2 上取得 Dashboard 網址</h4>
 <p>在 EC2 的 Terminal（Instance Connect 瀏覽器視窗）執行：</p>
-<pre class="codehilite"><code class="language-bash">openclaw dashboard --no-open
+<pre><code class="language-bash">openclaw dashboard --no-open
 </code></pre>
-
 <p>→ <code>--no-open</code> 表示「只給我網址，不要嘗試打開瀏覽器」（因為 EC2 上沒有瀏覽器）。</p>
 <p>你會看到類似這樣的輸出：</p>
-<pre class="codehilite"><code>Dashboard: http://127.0.0.1:18789/#token=abc123xyz456...
+<pre><code>Dashboard: http://127.0.0.1:18789/#token=abc123xyz456...
 </code></pre>
-
 <p><strong>把 <code>token=</code> 後面那串完整複製下來</strong>（後面要用）。</p>
 <h4 id="step-2-dashboard-port-ec2-ip">Step 2：開放 Dashboard port + 用 EC2 公有 IP 連線</h4>
 <blockquote>
@@ -793,13 +765,11 @@ WantedBy=multi-user.target
 </ol>
 <p><strong>2b. 讓 Dashboard 監聽外部連線：</strong></p>
 <p>回到 EC2 Terminal 執行：</p>
-<pre class="codehilite"><code class="language-bash">openclaw dashboard --no-open --host 0.0.0.0
+<pre><code class="language-bash">openclaw dashboard --no-open --host 0.0.0.0
 </code></pre>
-
 <p><strong>2c. 在你的瀏覽器打開 Dashboard：</strong></p>
-<pre class="codehilite"><code>http://&lt;EC2_PUBLIC_IP&gt;:18789/#token=abc123xyz456...
+<pre><code>http://&lt;EC2_PUBLIC_IP&gt;:18789/#token=abc123xyz456...
 </code></pre>
-
 <p>把 <code>&lt;EC2_PUBLIC_IP&gt;</code> 換成你的 EC2 公有 IP（在執行個體詳細資訊裡找），token 用 Step 1 的那串。</p>
 <blockquote>
 <p>📸 <em>建議截圖：OpenClaw Dashboard 的主畫面</em></p>
@@ -819,23 +789,20 @@ WantedBy=multi-user.target
 
 **macOS / Linux：**
 
-<pre class="codehilite"><code class="language-bash">ssh -i ~/.ssh/openclaw-key.pem -L 18789:localhost:18789 ubuntu@&lt;EC2_PUBLIC_IP&gt;
+<pre><code class="language-bash">ssh -i ~/.ssh/openclaw-key.pem -L 18789:localhost:18789 ubuntu@&lt;EC2_PUBLIC_IP&gt;
 </code></pre>
-
 
 
 **Windows（PowerShell）：**
 
-<pre class="codehilite"><code class="language-powershell">ssh -i $HOME\.ssh\openclaw-key.pem -L 18789:localhost:18789 ubuntu@&lt;EC2_PUBLIC_IP&gt;
+<pre><code class="language-powershell">ssh -i $HOME\.ssh\openclaw-key.pem -L 18789:localhost:18789 ubuntu@&lt;EC2_PUBLIC_IP&gt;
 </code></pre>
-
 
 
 連上後，在瀏覽器打開：
 
-<pre class="codehilite"><code>http://127.0.0.1:18789/#token=abc123xyz456...
+<pre><code>http://127.0.0.1:18789/#token=abc123xyz456...
 </code></pre>
-
 
 
 白話：這行在你電腦和 EC2 之間挖一條秘密隧道，讓你的瀏覽器透過隧道連到 Dashboard。
@@ -875,22 +842,19 @@ WantedBy=multi-user.target
 </ol>
 <p>白話：Chat ID 就是你在 Telegram 裡的「身份證號碼」。填這個是為了讓機器人只聽你的話，其他人傳訊息它會忽略。</p>
 <blockquote>
-<p>📸 <em>建議截圖：@userinfobot 回傳 Chat ID 的畫面</em><img alt="" src="assets/Lanq%20zh-hans.jpeg" /></p>
+<p>📸 <em>建議截圖：@userinfobot 回傳 Chat ID 的畫面</em><img alt="" src="assets/img_5.jpeg" /></p>
 </blockquote>
 <h4 id="step-4-ec2">Step 4：填入 EC2 設定</h4>
 <p>回到 EC2 Terminal，編輯 <code>.env</code>：</p>
-<pre class="codehilite"><code class="language-bash">nano ~/.openclaw/.env
+<pre><code class="language-bash">nano ~/.openclaw/.env
 </code></pre>
-
 <p>確認裡面有這兩行（把值換成你剛才拿到的）：</p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ
+<pre><code class="language-env">OPENCLAW_TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrSTUvwxYZ
 OPENCLAW_ALLOWED_CHAT_ID=1234567890
 </code></pre>
-
 <p>儲存後重啟 OpenClaw：</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl restart openclaw
+<pre><code class="language-bash">sudo systemctl restart openclaw
 </code></pre>
-
 <h4 id="step-5">Step 5：測試 + 配對授權！</h4>
 <ol>
 <li>回到 Telegram，搜尋你剛才建的 bot username（例如 <code>@my_openclaw_bot</code>）</li>
@@ -898,20 +862,17 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>隨便打一句話，例如「你好」</li>
 </ol>
 <p><strong>第一次會看到這個訊息（正常！）：</strong></p>
-<pre class="codehilite"><code>OpenClaw: access not configured. Pairing code: ABCD1234
+<pre><code>OpenClaw: access not configured. Pairing code: ABCD1234
 </code></pre>
-
 <p>→ 這表示 Bot 已經連上了，但<strong>你還沒被授權使用</strong>。需要完成配對：</p>
 <ol>
 <li>回到 EC2 Terminal，執行：</li>
 </ol>
-<pre class="codehilite"><code class="language-bash">openclaw pairing approve telegram &lt;PAIRING_CODE&gt;
+<pre><code class="language-bash">openclaw pairing approve telegram &lt;PAIRING_CODE&gt;
 </code></pre>
-
 <p>把 <code>&lt;PAIRING_CODE&gt;</code> 換成剛才 Telegram 顯示的配對碼，例如：</p>
-<pre class="codehilite"><code class="language-bash">openclaw pairing approve telegram ABCD1234
+<pre><code class="language-bash">openclaw pairing approve telegram ABCD1234
 </code></pre>
-
 <p>→ 成功會顯示：<code>Approved telegram sender &lt;你的USER_ID&gt;</code></p>
 <ol>
 <li>回到 Telegram，再發一次訊息</li>
@@ -985,22 +946,18 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <p>📸 <em>建議截圖：Discord 右鍵選單顯示「複製 ID」的畫面</em></p>
 </blockquote>
 <h4 id="step-5-ec2">Step 5：填入 EC2 設定</h4>
-<pre class="codehilite"><code class="language-bash">nano ~/.openclaw/.env
+<pre><code class="language-bash">nano ~/.openclaw/.env
 </code></pre>
-
 <p>加上（或改成）：</p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_DISCORD_BOT_TOKEN=你的Bot-Token
+<pre><code class="language-env">OPENCLAW_DISCORD_BOT_TOKEN=你的Bot-Token
 OPENCLAW_DISCORD_CHANNEL_IDS=你的頻道ID
 </code></pre>
-
 <p>如果有多個頻道，用逗號隔開：</p>
-<pre class="codehilite"><code class="language-env">OPENCLAW_DISCORD_CHANNEL_IDS=123456789,987654321
+<pre><code class="language-env">OPENCLAW_DISCORD_CHANNEL_IDS=123456789,987654321
 </code></pre>
-
 <p>儲存後重啟：</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl restart openclaw
+<pre><code class="language-bash">sudo systemctl restart openclaw
 </code></pre>
-
 <h4 id="step-6_1">Step 6：測試！</h4>
 <ol>
 <li>回到 Discord 你設定的頻道</li>
@@ -1060,21 +1017,18 @@ OPENCLAW_DISCORD_CHANNEL_IDS=你的頻道ID
 <p>白話：Nginx 就像大樓的「總櫃台」——外面的人先到櫃台，櫃台再把人帶到正確的辦公室。它可以幫你加 HTTPS（加密）、管理多個服務等等。</p>
 <h4 id="step-1-nginx">Step 1：安裝 Nginx</h4>
 <p>在 EC2 Terminal 執行：</p>
-<pre class="codehilite"><code class="language-bash">sudo apt install -y nginx
+<pre><code class="language-bash">sudo apt install -y nginx
 </code></pre>
-
 <p>→ 安裝完後 Nginx 會自動啟動。</p>
 <p>驗證它在跑：</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl status nginx
+<pre><code class="language-bash">sudo systemctl status nginx
 </code></pre>
-
 <p>→ 看到 <code>active (running)</code> 就 OK。</p>
 <h4 id="step-2-openclaw-nginx">Step 2：建立 OpenClaw 的 Nginx 設定</h4>
-<pre class="codehilite"><code class="language-bash">sudo nano /etc/nginx/sites-available/openclaw
+<pre><code class="language-bash">sudo nano /etc/nginx/sites-available/openclaw
 </code></pre>
-
 <p>貼上以下內容（把 <code>your-domain.com</code> 換成你的網域，如果沒有網域可以先用 EC2 的 Public IP）：</p>
-<pre class="codehilite"><code class="language-nginx">server {
+<pre><code class="language-nginx">server {
     listen 80;
     server_name your-domain.com;  # 或直接填 EC2 Public IP
 
@@ -1088,7 +1042,6 @@ OPENCLAW_DISCORD_CHANNEL_IDS=你的頻道ID
     }
 }
 </code></pre>
-
 <p>每行白話：
 - <code>listen 80</code>：監聽 80 port（HTTP 的標準門）
 - <code>server_name</code>：「這個設定是給哪個網域用的」
@@ -1096,18 +1049,15 @@ OPENCLAW_DISCORD_CHANNEL_IDS=你的頻道ID
 - 其餘 <code>proxy_set_header</code>：確保 WebSocket（即時通訊）能正常運作</p>
 <p>儲存離開（<code>Ctrl+O</code> → <code>Enter</code> → <code>Ctrl+X</code>）。</p>
 <h4 id="step-3_2">Step 3：啟用設定</h4>
-<pre class="codehilite"><code class="language-bash">sudo ln -s /etc/nginx/sites-available/openclaw /etc/nginx/sites-enabled/
+<pre><code class="language-bash">sudo ln -s /etc/nginx/sites-available/openclaw /etc/nginx/sites-enabled/
 </code></pre>
-
 <p>→ 建立一個「連結」，告訴 Nginx「這個設定要啟用」。</p>
-<pre class="codehilite"><code class="language-bash">sudo nginx -t
+<pre><code class="language-bash">sudo nginx -t
 </code></pre>
-
 <p>→ 測試設定有沒有語法錯誤。看到 <code>syntax is ok</code> 和 <code>test is successful</code> 就好。
 → 如果出現紅色錯誤，通常是括號沒配對或分號忘記加，回去用 nano 檢查。</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl reload nginx
+<pre><code class="language-bash">sudo systemctl reload nginx
 </code></pre>
-
 <p>→ 讓 Nginx 重新載入設定（不需要重啟整個服務）。</p>
 <h4 id="step-4-security-group-port-80">Step 4：在 Security Group 開放 port 80</h4>
 <p>回到 AWS Console → EC2 → 你的執行個體 → <strong>Security</strong>（安全）tab → 點 <strong>Security Group</strong>（安全群組）連結 → <strong>Edit inbound rules</strong>（編輯傳入規則）：
@@ -1115,10 +1065,9 @@ OPENCLAW_DISCORD_CHANNEL_IDS=你的頻道ID
 - 點 <strong>Save rules</strong></p>
 <p>現在你可以在瀏覽器直接輸入 <code>http://&lt;EC2_PUBLIC_IP&gt;</code> 打開 Dashboard（記得加上 token 參數）。</p>
 <h4 id="https-ssl">可選：加上 HTTPS（免費 SSL 憑證）</h4>
-<pre class="codehilite"><code class="language-bash">sudo apt install -y certbot python3-certbot-nginx
+<pre><code class="language-bash">sudo apt install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d your-domain.com
 </code></pre>
-
 <p>→ Certbot 會自動幫你申請免費的 Let's Encrypt SSL 憑證，並修改 Nginx 設定。
 → 按照提示輸入 email、同意條款就好。
 → 完成後就可以用 <code>https://your-domain.com</code> 安全連線了。</p>
@@ -1127,20 +1076,17 @@ sudo certbot --nginx -d your-domain.com
 <h2 id="5">5) 日常維護：監控、備份、更新</h2>
 <h3 id="51">5.1 監控（怎麼知道它還活著？）</h3>
 <p><strong>快速檢查（常用）：</strong></p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl status openclaw
+<pre><code class="language-bash">sudo systemctl status openclaw
 </code></pre>
-
 <p>→ 看到 <code>active (running)</code> = 正常。看到 <code>failed</code> 或 <code>inactive</code> = 出事了。</p>
 <p><strong>看日誌（出事時用）：</strong></p>
-<pre class="codehilite"><code class="language-bash">journalctl -u openclaw -n 50
+<pre><code class="language-bash">journalctl -u openclaw -n 50
 </code></pre>
-
 <p>→ 顯示最近 50 行日誌。<code>-n 50</code> 的數字可以改，<code>-n 200</code> 看更多。
 → 白話：像行車紀錄器回放，看剛剛發生什麼事。</p>
 <p><strong>即時追蹤（Debug 用）：</strong></p>
-<pre class="codehilite"><code class="language-bash">journalctl -u openclaw -f
+<pre><code class="language-bash">journalctl -u openclaw -f
 </code></pre>
-
 <p>→ 即時顯示新日誌（像直播）。按 <code>Ctrl + C</code> 停止。
 → 用途：你在 Telegram 發一條訊息，同時看這裡的日誌反應，就能知道問題出在哪。</p>
 <p><strong>進階：AWS CloudWatch（可選）</strong></p>
@@ -1174,19 +1120,16 @@ sudo certbot --nginx -d your-domain.com
 </table>
 <p><strong>最簡單的備份方式：手動打包下載</strong></p>
 <p>在 EC2 上執行：</p>
-<pre class="codehilite"><code class="language-bash">tar czf ~/openclaw-backup-$(date +%Y%m%d).tar.gz ~/.openclaw/
+<pre><code class="language-bash">tar czf ~/openclaw-backup-$(date +%Y%m%d).tar.gz ~/.openclaw/
 </code></pre>
-
 <p>→ 把整個 <code>.openclaw</code> 資料夾打包成一個壓縮檔，檔名帶日期。</p>
 <p>把備份檔下載到你的電腦（在你自己的 Terminal / PowerShell 執行，不是 EC2）：</p>
 <p><strong>macOS / Linux：</strong></p>
-<pre class="codehilite"><code class="language-bash">scp -i ~/.ssh/openclaw-key.pem ssm-user@&lt;EC2_IP&gt;:~/openclaw-backup-*.tar.gz ~/Desktop/
+<pre><code class="language-bash">scp -i ~/.ssh/openclaw-key.pem ssm-user@&lt;EC2_IP&gt;:~/openclaw-backup-*.tar.gz ~/Desktop/
 </code></pre>
-
 <p><strong>Windows（PowerShell）：</strong></p>
-<pre class="codehilite"><code class="language-powershell">scp -i $HOME\.ssh\openclaw-key.pem ssm-user@&lt;EC2_IP&gt;:~/openclaw-backup-*.tar.gz $HOME\Desktop\
+<pre><code class="language-powershell">scp -i $HOME\.ssh\openclaw-key.pem ssm-user@&lt;EC2_IP&gt;:~/openclaw-backup-*.tar.gz $HOME\Desktop\
 </code></pre>
-
 <blockquote>
 <p>💡 <code>scp</code> 的 <code>ssm-user@</code> 要換成你 EC2 上的實際登入身份。如果是用 SSH 以 <code>ubuntu</code> 登入就用 <code>ubuntu@</code>。</p>
 </blockquote>
@@ -1199,17 +1142,14 @@ sudo certbot --nginx -d your-domain.com
 </ol>
 <p>白話：每天自動幫你的 EC2「拍照存檔」，壞掉的時候可以用照片還原到任意一天。</p>
 <h3 id="53-openclaw">5.3 更新 OpenClaw</h3>
-<pre class="codehilite"><code class="language-bash">sudo npm i -g openclaw@latest
+<pre><code class="language-bash">sudo npm i -g openclaw@latest
 </code></pre>
-
 <p>→ 把 OpenClaw 更新到最新版本。看到 <code>added X packages</code> 就是成功。</p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl restart openclaw
+<pre><code class="language-bash">sudo systemctl restart openclaw
 </code></pre>
-
 <p>→ 重啟讓新版本生效。</p>
-<pre class="codehilite"><code class="language-bash">openclaw --version
+<pre><code class="language-bash">openclaw --version
 </code></pre>
-
 <p>→ 確認版本號已更新。</p>
 <h4 id="_10">⚠️ 更新注意事項</h4>
 <ul>
@@ -1232,15 +1172,13 @@ sudo certbot --nginx -d your-domain.com
 → AWS Console → EC2 → 你的執行個體 → <strong>安全</strong>（Security）tab → 看<strong>傳入規則</strong>（Inbound rules）
 → 應該要有一條：Type <code>SSH</code>，Port <code>22</code>，Source 是你的 IP</p>
 <p>3️⃣ <strong>pem 檔權限太寬鬆？</strong></p>
-<pre class="codehilite"><code class="language-bash">chmod 400 ~/.ssh/openclaw-key.pem
+<pre><code class="language-bash">chmod 400 ~/.ssh/openclaw-key.pem
 </code></pre>
-
 <p>→ SSH 要求私鑰檔只有你能讀。如果權限太開放（例如 644），SSH 會拒絕使用它。
 → 錯誤訊息通常是 <code>WARNING: UNPROTECTED PRIVATE KEY FILE!</code></p>
 <p>4️⃣ <strong>pem 檔路徑對嗎？</strong></p>
-<pre class="codehilite"><code class="language-bash">ls -la ~/.ssh/openclaw-key.pem
+<pre><code class="language-bash">ls -la ~/.ssh/openclaw-key.pem
 </code></pre>
-
 <p>→ 如果顯示 <code>No such file or directory</code>，表示檔案不在那。用 <code>find ~ -name "*.pem"</code> 搜尋一下。</p>
 <p>5️⃣ <strong>你的 IP 變了？</strong>（常見於手機分享網路或咖啡廳 WiFi）
 → 到 <a href="https://whatismyip.com">whatismyip.com</a> 查你目前的 IP
@@ -1249,14 +1187,12 @@ sudo certbot --nginx -d your-domain.com
 <p><strong>症狀：</strong> <code>systemctl status openclaw</code> 顯示 <code>failed</code> 或 <code>inactive</code>。</p>
 <p><strong>排錯步驟：</strong></p>
 <p>1️⃣ <strong>先手動跑，直接看錯誤訊息（最有效）：</strong></p>
-<pre class="codehilite"><code class="language-bash">openclaw gateway run
+<pre><code class="language-bash">openclaw gateway run
 </code></pre>
-
 <p>→ 不透過 systemd，直接在前台啟動。錯誤會直接顯示，比看日誌更直覺。</p>
 <p>2️⃣ <strong>看 systemd 日誌：</strong></p>
-<pre class="codehilite"><code class="language-bash">journalctl -u openclaw -n 100 --no-pager
+<pre><code class="language-bash">journalctl -u openclaw -n 100 --no-pager
 </code></pre>
-
 <p>3️⃣ <strong>常見錯誤和解法：</strong></p>
 <table>
 <thead>
@@ -1308,14 +1244,12 @@ sudo certbot --nginx -d your-domain.com
 <p><strong>症狀：</strong> 在 Telegram / Discord 傳訊息給 Bot，沒有任何回應。</p>
 <p><strong>排錯步驟：</strong></p>
 <p>1️⃣ <strong>OpenClaw 本身有在跑嗎？</strong></p>
-<pre class="codehilite"><code class="language-bash">sudo systemctl status openclaw
+<pre><code class="language-bash">sudo systemctl status openclaw
 </code></pre>
-
 <p>→ 不是 <code>active (running)</code> 的話，先解決 6.2 的問題。</p>
 <p>2️⃣ <strong>看日誌有沒有收到訊息：</strong></p>
-<pre class="codehilite"><code class="language-bash">journalctl -u openclaw -f
+<pre><code class="language-bash">journalctl -u openclaw -f
 </code></pre>
-
 <p>→ 開著這個，然後去 Telegram 發訊息
 → 如果日誌完全沒反應 → Token 錯了，Bot 根本沒連上
 → 如果日誌有顯示收到但出錯 → 看錯誤訊息</p>
@@ -1332,116 +1266,101 @@ sudo certbot --nginx -d your-domain.com
 → $0 的話 AI 無法回覆。加值後就好了。</p>
 <h3 id="64">6.4 時區顯示不對</h3>
 <p><strong>症狀：</strong> 日誌時間或排程時間跟台灣時間差 8 小時。</p>
-<pre class="codehilite"><code class="language-bash">timedatectl
+<pre><code class="language-bash">timedatectl
 </code></pre>
-
 <p>→ 看 <code>Time zone</code> 那行。如果是 <code>UTC</code> 就是沒設。</p>
-<pre class="codehilite"><code class="language-bash">sudo timedatectl set-timezone Asia/Taipei
+<pre><code class="language-bash">sudo timedatectl set-timezone Asia/Taipei
 </code></pre>
-
 <p>→ 設好後重啟 OpenClaw：<code>sudo systemctl restart openclaw</code></p>
 <h3 id="65">6.5 磁碟空間滿了</h3>
 <p><strong>症狀：</strong> 各種奇怪錯誤，或者新檔案寫不進去。</p>
-<pre class="codehilite"><code class="language-bash">df -h
+<pre><code class="language-bash">df -h
 </code></pre>
-
 <p>→ 看 <code>/</code> 那行的 <code>Use%</code>。超過 90% 就要處理。</p>
 <p><strong>清理方法：</strong></p>
-<pre class="codehilite"><code class="language-bash"># 清理舊日誌（只保留最近 3 天）
+<pre><code class="language-bash"># 清理舊日誌（只保留最近 3 天）
 sudo journalctl --vacuum-time=3d
 
 # 看哪個資料夾最大
 du -sh /* 2&gt;/dev/null | sort -rh | head -10
 </code></pre>
-
 <p>如果 20GB 不夠用，可以在 AWS Console 擴充硬碟（EC2 → <strong>Volumes / 磁碟區</strong> → <strong>Modify Volume / 修改磁碟區</strong> → 改大小）。</p>
 <h3 id="66">6.6 安裝相關問題總整理</h3>
 <p>以下是實際在 AWS EC2 上安裝 OpenClaw 時最常遇到的問題，依發生頻率排列：</p>
 <h4 id="openclaw-command-not-found">🔴 <code>openclaw: command not found</code>（最常見）</h4>
 <p><strong>可能原因 1：npm 全域路徑不在 PATH 裡</strong>（Instance Connect / SSM 環境特別容易發生）</p>
-<pre class="codehilite"><code class="language-bash"># 找到 openclaw 實際裝在哪
+<pre><code class="language-bash"># 找到 openclaw 實際裝在哪
 find / -name &quot;openclaw&quot; -type f 2&gt;/dev/null
 
 # 建軟連結到系統路徑
 sudo ln -sf $(npm prefix -g)/bin/openclaw /usr/local/bin/openclaw
 </code></pre>
-
 <blockquote>
 <p>💡 <strong>為什麼 Instance Connect / SSM 特別容易中招？</strong> 因為它開的是 <code>/bin/sh</code>（不是 bash），不會讀 <code>~/.bashrc</code> 或 <code>~/.profile</code>。在這些檔案裡加 <code>export PATH=...</code> 完全沒用。唯一可靠的做法就是把執行檔放到 <code>/usr/local/bin/</code>。</p>
 </blockquote>
 <p><strong>可能原因 2：裝到了 npm 上的假套件</strong></p>
 <p>npm registry 上有一個佔位套件（<code>openclaw@0.0.1</code>，空殼沒功能）。解法：</p>
-<pre class="codehilite"><code class="language-bash">sudo npm i -g openclaw@latest
+<pre><code class="language-bash">sudo npm i -g openclaw@latest
 </code></pre>
-
 <p><strong>可能原因 3：<code>sudo npm</code> 本身找不到</strong></p>
 <p>自動安裝腳本裝的 npm 可能不在 root 的 PATH 裡：</p>
-<pre class="codehilite"><code class="language-bash"># 找 npm 在哪
+<pre><code class="language-bash"># 找 npm 在哪
 find / -name &quot;npm&quot; -type f 2&gt;/dev/null
 # 用絕對路徑執行
 sudo /usr/local/bin/npm i -g openclaw@latest
 </code></pre>
-
 <h4 id="gyp-err">🔴 安裝過程編譯失敗（<code>gyp ERR!</code>）</h4>
 <p>OpenClaw 的某些模組需要現場編譯（C/C++）。如果沒裝編譯工具會失敗：</p>
-<pre class="codehilite"><code class="language-bash">sudo apt install -y build-essential python3-dev pkg-config libopus-dev
+<pre><code class="language-bash">sudo apt install -y build-essential python3-dev pkg-config libopus-dev
 sudo npm i -g openclaw@latest
 </code></pre>
-
 <blockquote>
 <p>看到 <code>CC(target)</code>、<code>note:</code>、<code>node-pre-gyp WARN falling back to source compile</code> 都是<strong>正常的</strong>，只有 <code>gyp ERR!</code> 或 <code>make: *** Error</code> 才是真正的錯誤。</p>
 </blockquote>
 <h4 id="nodejs">🟡 Node.js 版本太舊</h4>
 <p>OpenClaw 需要 <strong>Node.js ≥ 22</strong>。如果你手動安裝了 Node 18 或 20，可能遇到各種奇怪問題：</p>
-<pre class="codehilite"><code class="language-bash">node -v  # 確認版本
+<pre><code class="language-bash">node -v  # 確認版本
 
 # 如果不是 v22+，重裝：
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt install -y nodejs
 </code></pre>
-
 <h4 id="systemd-user-failed-to-connect-to-bus">🟡 <code>systemd --user</code> 報 <code>Failed to connect to bus</code></h4>
 <p>Instance Connect / SSM 環境沒有 user DBus session。只能用系統級 systemd：</p>
-<pre class="codehilite"><code class="language-bash"># ✅ 正確
+<pre><code class="language-bash"># ✅ 正確
 sudo nano /etc/systemd/system/openclaw.service
 
 # ❌ 錯誤（會失敗）
 systemctl --user ...
 </code></pre>
-
 <h4 id="warn-npm-install-openclawlatest-failed-retrying-openclawnext">🟡 <code>WARN npm install openclaw@latest failed; retrying openclaw@next</code></h4>
 <p>自動安裝腳本的 <code>@latest</code> 版本安裝失敗了。解法：</p>
-<pre class="codehilite"><code class="language-bash"># 手動補裝
+<pre><code class="language-bash"># 手動補裝
 sudo npm i -g openclaw@latest
 
 # 如果還是失敗，確認 Node 版本 ≥ 22，並裝好編譯工具（見上方）
 </code></pre>
-
 <hr />
 <h3 id="67-npm-openclaw">6.7 npm 上的「假 openclaw」套件（補充說明）</h3>
 <p><strong>症狀：</strong> <code>npm install -g openclaw</code> 成功了，但 <code>openclaw --version</code> 顯示 <code>command not found</code> 或完全沒有 CLI。</p>
 <p><strong>原因：</strong> npm registry 上有一個<strong>佔位套件</strong>：</p>
-<pre class="codehilite"><code class="language-json">{ &quot;name&quot;: &quot;openclaw&quot;, &quot;version&quot;: &quot;0.0.1&quot;, &quot;description&quot;: &quot;Empty placeholder package.&quot; }
+<pre><code class="language-json">{ &quot;name&quot;: &quot;openclaw&quot;, &quot;version&quot;: &quot;0.0.1&quot;, &quot;description&quot;: &quot;Empty placeholder package.&quot; }
 </code></pre>
-
 <p>它沒有 <code>bin</code> 欄位，裝了等於沒裝。</p>
 <p><strong>解法：</strong> 安裝時永遠加 <code>@latest</code>：</p>
-<pre class="codehilite"><code class="language-bash">sudo npm i -g openclaw@latest
+<pre><code class="language-bash">sudo npm i -g openclaw@latest
 </code></pre>
-
 <h3 id="67-ssm-instance-connect-path">6.7 SSM / Instance Connect 的 PATH 陷阱</h3>
 <p><strong>症狀：</strong> 在 <code>.bashrc</code> 或 <code>.profile</code> 加了 <code>export PATH=...</code>，但重開視窗後 <code>openclaw</code> 又 <code>command not found</code>。</p>
 <p><strong>原因：</strong> EC2 Instance Connect 和 SSM Session Manager 開的是非 login、非 interactive 的 <code>/bin/sh</code> shell，<strong>不會讀取</strong> <code>~/.bashrc</code>、<code>~/.profile</code>、<code>/etc/profile.d/</code>。</p>
 <p><strong>唯一正解：</strong> 把 openclaw 軟連結到系統路徑：</p>
-<pre class="codehilite"><code class="language-bash">sudo ln -sf $(npm prefix -g)/bin/openclaw /usr/local/bin/openclaw
+<pre><code class="language-bash">sudo ln -sf $(npm prefix -g)/bin/openclaw /usr/local/bin/openclaw
 </code></pre>
-
 <p>→ <code>/usr/local/bin/</code> 在任何 shell 環境下都在 PATH 裡，不依賴任何設定檔。</p>
 <h3 id="68-systemd-user">6.8 <code>systemd --user</code> 無法使用</h3>
 <p><strong>症狀：</strong> 嘗試用 <code>systemctl --user</code> 管理 OpenClaw，報錯：</p>
-<pre class="codehilite"><code>Failed to connect to bus: $DBUS_SESSION_BUS_ADDRESS not defined
+<pre><code>Failed to connect to bus: $DBUS_SESSION_BUS_ADDRESS not defined
 </code></pre>
-
 <p><strong>原因：</strong> SSM / Instance Connect 環境沒有 user DBus session。</p>
 <p><strong>解法：</strong> 只用系統級 systemd（<code>/etc/systemd/system/openclaw.service</code>），不用 <code>--user</code>。</p>
 <h3 id="69-ec2-ip">6.9 EC2 停了之後 IP 變了</h3>
@@ -1509,40 +1428,35 @@ sudo npm i -g openclaw@latest
 - <code>/home/ubuntu/.openclaw</code> — 後來用 SSH 登入時誤建的，空的</p>
 <p><strong>結論：</strong> 如果你切過 user（<code>sudo su</code>、<code>ssh ubuntu@...</code>、Instance Connect vs SSH），很可能同時存在兩套設定。<strong>先搞清楚你「真正在用」的是哪一個 HOME。</strong></p>
 <p>排查指令：</p>
-<pre class="codehilite"><code class="language-bash">echo $HOME
+<pre><code class="language-bash">echo $HOME
 ls -la ~/.openclaw/
 </code></pre>
-
 <h3 id="2systemd-user-telegram-home">坑 2：systemd 的 User 必須跟「有 Telegram 設定的那個 HOME」一致</h3>
 <p>已驗證可用的 service 關鍵三行：</p>
-<pre class="codehilite"><code class="language-ini">User=ssm-user
+<pre><code class="language-ini">User=ssm-user
 EnvironmentFile=-/home/ssm-user/.openclaw/.env
 ExecStart=/usr/local/bin/openclaw gateway run --allow-unconfigured
 </code></pre>
-
 <p>如果 <code>User=ubuntu</code> 但 Telegram 設定在 <code>/home/ssm-user/.openclaw/</code>，systemd 啟動的 Gateway 會讀到 <code>/home/ubuntu/.openclaw/</code>（空的），Telegram 就「消失」了。</p>
 <p><strong>規則：</strong> systemd 的 <code>User=</code> 決定 <code>HOME=</code>，決定讀哪個 <code>.openclaw/</code>。三者必須一致。</p>
 <h3 id="3gateway-token-missing-device-token-mismatch">坑 3：「gateway token missing / device token mismatch」通常是用錯身分</h3>
 <p><strong>症狀：</strong> <code>openclaw status</code> 或 <code>gateway probe</code> 顯示 unauthorized、token missing、device token mismatch。</p>
 <p><strong>真正原因（90% 的情況）：</strong> 你用 <code>sudo</code> / 另一個 user / 另一個 HOME 去跑 CLI，導致 CLI 讀到的 token 跟 systemd Gateway 的 token 對不上。</p>
 <p><strong>排查順序：</strong></p>
-<pre class="codehilite"><code class="language-bash">whoami          # 確認目前身份
+<pre><code class="language-bash">whoami          # 確認目前身份
 echo $HOME      # 確認 HOME 路徑
 ls ~/.openclaw/ # 確認這個 HOME 下有沒有設定
 </code></pre>
-
 <p>先確認這三個，再談 token 問題。</p>
 <h3 id="4cli-telegram">坑 4：CLI 連不上 ≠ Telegram 掛掉</h3>
 <p><code>openclaw status</code> 報錯不代表 Telegram 不能用。它們走不同的通道。</p>
 <p><strong>判斷 Telegram 是否正常的唯一標準：</strong> journal 日誌</p>
-<pre class="codehilite"><code class="language-bash">journalctl -u openclaw -f
+<pre><code class="language-bash">journalctl -u openclaw -f
 </code></pre>
-
 <p>看到以下訊息就代表 Telegram provider 正常運作：</p>
-<pre class="codehilite"><code>[telegram] starting provider (@xxx_bot)
+<pre><code>[telegram] starting provider (@xxx_bot)
 [telegram] sendMessage ok chat=xxxx message=xx
 </code></pre>
-
 <p>以 Telegram 實際回話 + journal 為準，CLI 狀態只是其中一個視角。</p>
 <h3 id="5-openclawmjs-missing-distentrymjs">坑 5：亂搬 openclaw.mjs 會踩到「missing dist/entry.(m)js」</h3>
 <p><strong>原因：</strong> 只複製 <code>openclaw.mjs</code> 到 <code>/usr/local/bin/</code> 會缺 <code>dist/</code> build output，啟動直接炸。</p>
