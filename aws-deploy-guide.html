@@ -334,7 +334,7 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 <li>直接點右下角橘色的 <strong>Connect</strong> 按鈕</li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：Connect to instance 頁面，EC2 Instance Connect 分頁，橘色 Connect 按鈕</em><img alt="" src="assets/img_3.png" />
+<p><img alt="" src="assets/img_3.png" />
 <strong>幾秒後，瀏覽器會開一個新視窗（或分頁），裡面就是你 EC2 的 Terminal！</strong></p>
 </blockquote>
 <p>你會看到畫面出現一個 <code>$</code> 符號（命令提示字元）：</p>
@@ -453,7 +453,7 @@ icacls $HOME\.ssh\openclaw-key.pem /inheritance:r /grant:r &quot;$($env:USERNAME
 </code></pre>
 <p>你會看到畫面變成一個<strong>空白的文字編輯器</strong>，底部有一排快捷鍵提示（<code>^G Get Help</code> <code>^O Write Out</code> 等等）。</p>
 <blockquote>
-<p>📸 <em>建議截圖：nano 編輯器的空白畫面，注意底部的快捷鍵列</em><img alt="" src="assets/img_1.png" />
+<p><img alt="" src="assets/img_1.png" />
 <strong>nano 超簡單操作指南：</strong>
 - 直接打字就能輸入內容（跟記事本一樣）
 - 方向鍵移動游標
@@ -531,7 +531,6 @@ TZ=Asia/Taipei
 <li>註冊完成後，你會進到 OpenRouter 的首頁</li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：OpenRouter 首頁，指出右上角的 Sign In</em></p>
 </blockquote>
 <h4 id="step-2-api-key">Step 2：建立 API Key</h4>
 <ol>
@@ -543,7 +542,7 @@ TZ=Asia/Taipei
 </ol>
 <p>白話：API Key 就是 AI 模型的「點餐密碼」，沒有這個密碼，OpenClaw 叫不動任何 AI。</p>
 <blockquote>
-<p>📸 <em>建議截圖：OpenRouter Keys 頁面，Create Key 按鈕和產生的 Key</em><img alt="" src="assets/img_6.jpeg" /></p>
+<p><img alt="" src="assets/img_6.jpeg" /></p>
 </blockquote>
 <h4 id="step-3_1">Step 3：儲值 &amp; 設定費用上限（超重要！）</h4>
 <ol>
@@ -697,7 +696,7 @@ WantedBy=multi-user.target
 - <code>.env</code> 裡 Token 沒填或格式錯 → 回 3.4 檢查
 - <code>ExecStart</code> 路徑不對 → 執行 <code>which openclaw</code> 確認路徑</p>
 <blockquote>
-<p>📸 <em>建議截圖：<code>systemctl status openclaw</code> 顯示 active (running) 的成功畫面</em><img alt="" src="assets/img_2.png" /></p>
+<p><img alt="" src="assets/img_2.png" /></p>
 </blockquote>
 <h4 id="_9">常用管理指令（之後會用到）</h4>
 <table>
@@ -772,7 +771,6 @@ WantedBy=multi-user.target
 </code></pre>
 <p>把 <code>&lt;EC2_PUBLIC_IP&gt;</code> 換成你的 EC2 公有 IP（在執行個體詳細資訊裡找），token 用 Step 1 的那串。</p>
 <blockquote>
-<p>📸 <em>建議截圖：OpenClaw Dashboard 的主畫面</em></p>
 </blockquote>
 <p>你應該會看到 OpenClaw 的管理介面！在這裡你可以：
 - <strong>查看即時對話</strong>：看 AI 跟你說了什麼
@@ -831,7 +829,7 @@ WantedBy=multi-user.target
 <li><strong>複製那串 Token</strong>（<code>123456789:ABC...</code> 整串）— 這就是你的 <code>OPENCLAW_TELEGRAM_BOT_TOKEN</code></li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：BotFather 回傳 Token 的對話畫面（Token 碼住）</em><img alt="" src="assets/img_4.jpeg" />
+<p><img alt="" src="assets/img_4.jpeg" />
 ⚠️ <strong>這串 Token 等於機器人的密碼，不要給任何人看到。</strong> 如果不小心洩漏了，在 BotFather 輸入 <code>/revoke</code> 可以作廢舊 Token 換新的。</p>
 </blockquote>
 <h4 id="step-3-chat-id">Step 3：查你的 Chat ID</h4>
@@ -842,7 +840,7 @@ WantedBy=multi-user.target
 </ol>
 <p>白話：Chat ID 就是你在 Telegram 裡的「身份證號碼」。填這個是為了讓機器人只聽你的話，其他人傳訊息它會忽略。</p>
 <blockquote>
-<p>📸 <em>建議截圖：@userinfobot 回傳 Chat ID 的畫面</em><img alt="" src="assets/img_5.jpeg" /></p>
+<p><img alt="" src="assets/img_5.jpeg" /></p>
 </blockquote>
 <h4 id="step-4-ec2">Step 4：填入 EC2 設定</h4>
 <p>回到 EC2 Terminal，編輯 <code>.env</code>：</p>
@@ -894,7 +892,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>名稱填 <code>OpenClaw</code>（隨意）→ 勾 Terms of Service → 點 <strong>Create</strong></li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：Discord Developer Portal 的 New Application 按鈕</em></p>
 </blockquote>
 <h4 id="step-2-bot-token">Step 2：建立 Bot 並取得 Token</h4>
 <ol>
@@ -911,7 +908,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>點 <strong>Save Changes</strong></li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：Bot 頁面的 Token 區域 + 三個 Intent 開關</em></p>
 </blockquote>
 <p>⚠️ <strong>Message Content Intent</strong> 如果沒開，Bot 只能看到斜線指令（/command），看不到一般訊息內容。</p>
 <h4 id="step-3-bot-discord-server">Step 3：邀請 Bot 進入你的 Discord Server</h4>
@@ -932,7 +928,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>回到 Discord，你應該會在 Server 成員列表看到 <code>OpenClaw</code> 上線了（可能顯示為離線，正常的，因為 EC2 端還沒連上）</li>
 </ol>
 <blockquote>
-<p>📸 <em>建議截圖：OAuth2 URL Generator 勾選 bot scope 和權限的畫面</em></p>
 </blockquote>
 <h4 id="step-4-id">Step 4：取得頻道 ID</h4>
 <ol>
@@ -943,7 +938,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 </ol>
 <p>白話：開啟開發者模式後，右鍵任何東西都能複製它的 ID。頻道 ID 就是告訴 Bot「你只能在這個房間說話」。</p>
 <blockquote>
-<p>📸 <em>建議截圖：Discord 右鍵選單顯示「複製 ID」的畫面</em></p>
 </blockquote>
 <h4 id="step-5-ec2">Step 5：填入 EC2 設定</h4>
 <pre><code class="language-bash">nano ~/.openclaw/.env
