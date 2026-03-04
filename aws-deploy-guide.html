@@ -530,8 +530,6 @@ TZ=Asia/Taipei
 <li>點右上角 <strong>Sign In</strong> → 選 Google / GitHub / Email 任一方式註冊</li>
 <li>註冊完成後，你會進到 OpenRouter 的首頁</li>
 </ol>
-<blockquote>
-</blockquote>
 <h4 id="step-2-api-key">Step 2：建立 API Key</h4>
 <ol>
 <li>登入後，點左邊選單的 <strong>Keys</strong>（或直接前往 <a href="https://openrouter.ai/keys">openrouter.ai/keys</a>）</li>
@@ -770,8 +768,6 @@ WantedBy=multi-user.target
 <pre><code>http://&lt;EC2_PUBLIC_IP&gt;:18789/#token=abc123xyz456...
 </code></pre>
 <p>把 <code>&lt;EC2_PUBLIC_IP&gt;</code> 換成你的 EC2 公有 IP（在執行個體詳細資訊裡找），token 用 Step 1 的那串。</p>
-<blockquote>
-</blockquote>
 <p>你應該會看到 OpenClaw 的管理介面！在這裡你可以：
 - <strong>查看即時對話</strong>：看 AI 跟你說了什麼
 - <strong>調整模型</strong>：切換用哪個 AI（Claude / GPT / Gemini）
@@ -891,8 +887,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>點右上角 <strong>New Application</strong></li>
 <li>名稱填 <code>OpenClaw</code>（隨意）→ 勾 Terms of Service → 點 <strong>Create</strong></li>
 </ol>
-<blockquote>
-</blockquote>
 <h4 id="step-2-bot-token">Step 2：建立 Bot 並取得 Token</h4>
 <ol>
 <li>在左邊選單點 <strong>Bot</strong></li>
@@ -907,8 +901,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 </li>
 <li>點 <strong>Save Changes</strong></li>
 </ol>
-<blockquote>
-</blockquote>
 <p>⚠️ <strong>Message Content Intent</strong> 如果沒開，Bot 只能看到斜線指令（/command），看不到一般訊息內容。</p>
 <h4 id="step-3-bot-discord-server">Step 3：邀請 Bot 進入你的 Discord Server</h4>
 <ol>
@@ -927,8 +919,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>選擇你要加入的 Server → 點 <strong>Authorize</strong></li>
 <li>回到 Discord，你應該會在 Server 成員列表看到 <code>OpenClaw</code> 上線了（可能顯示為離線，正常的，因為 EC2 端還沒連上）</li>
 </ol>
-<blockquote>
-</blockquote>
 <h4 id="step-4-id">Step 4：取得頻道 ID</h4>
 <ol>
 <li>在 Discord 桌面版，打開 <strong>使用者設定</strong>（左下角齒輪 ⚙️）</li>
@@ -937,8 +927,6 @@ OPENCLAW_ALLOWED_CHAT_ID=1234567890
 <li>這串數字就是 <code>OPENCLAW_DISCORD_CHANNEL_IDS</code></li>
 </ol>
 <p>白話：開啟開發者模式後，右鍵任何東西都能複製它的 ID。頻道 ID 就是告訴 Bot「你只能在這個房間說話」。</p>
-<blockquote>
-</blockquote>
 <h4 id="step-5-ec2">Step 5：填入 EC2 設定</h4>
 <pre><code class="language-bash">nano ~/.openclaw/.env
 </code></pre>
