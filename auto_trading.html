@@ -411,11 +411,13 @@
       renderModules(g, document.getElementById("moduleSearch").value);
     });
 
-    // Settings
-    document.getElementById("settingsTable").innerHTML = `<thead><tr><th>設定鍵</th><th>類型</th><th>來源</th><th>狀態</th><th>值</th></tr></thead><tbody>${D.settings.map(s=>`<tr><td><code>${s.key}</code></td><td class="text-muted">${s.class}</td><td class="text-muted">${s.source}</td><td class="${s.status.includes('已')?'ok':'warn'}">${s.status}</td><td><code>${s.value}</code></td></tr>`).join("")}</tbody>`;
+    // Settings (element may not exist in current layout)
+    if(document.getElementById("settingsTable"))
+      document.getElementById("settingsTable").innerHTML = `<thead><tr><th>設定鍵</th><th>類型</th><th>來源</th><th>狀態</th><th>值</th></tr></thead><tbody>${D.settings.map(s=>`<tr><td><code>${s.key}</code></td><td class="text-muted">${s.class}</td><td class="text-muted">${s.source}</td><td class="${s.status.includes('已')?'ok':'warn'}">${s.status}</td><td><code>${s.value}</code></td></tr>`).join("")}</tbody>`;
 
-    // Paths
-    document.getElementById("pathsTable").innerHTML = `<thead><tr><th>用途</th><th>路徑</th><th>說明</th></tr></thead><tbody>${D.paths.map(p=>`<tr><td>${p.name}</td><td><code>${p.path}</code></td><td class="text-muted">${p.note}</td></tr>`).join("")}</tbody>`;
+    // Paths (element may not exist in current layout)
+    if(document.getElementById("pathsTable"))
+      document.getElementById("pathsTable").innerHTML = `<thead><tr><th>用途</th><th>路徑</th><th>說明</th></tr></thead><tbody>${D.paths.map(p=>`<tr><td>${p.name}</td><td><code>${p.path}</code></td><td class="text-muted">${p.note}</td></tr>`).join("")}</tbody>`;
 
     // Git
     document.getElementById("gitTable").innerHTML = `<thead><tr><th>#</th><th>Commit</th><th>日期</th><th>作者</th><th>訊息</th></tr></thead><tbody>${D.gitLogs.map((g,i)=>`<tr><td class="text-muted">${i+1}</td><td><code>${g.hash}</code></td><td class="text-muted">${g.date}</td><td>${g.author}</td><td>${g.message}</td></tr>`).join("")}</tbody>`;
